@@ -1,14 +1,17 @@
 # api/urls.py
-from django.urls import path
-from .views import CreateUserView
+from django.urls import path, include
+from .views import CreateUserView, ClienteViewSet, ServicoViewSet, OrdemDeServicoViewSet
+from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+router = DefaultRouter()
+router.register(r'clientes', ClienteViewSet, basename='cliente')
+router.register(r'servicos', ServicoViewSet, basename='servico')
+router.register(r'ordens', OrdemDeServicoViewSet, basename='ordemdeservico')
+
 urlpatterns = [
-    # Esta linha cria o endereço: .../api/user/register/
     path("user/register/", CreateUserView.as_view(), name="register"),
-
-    # Esta linha cria o endereço: .../api/token/
     path("token/", TokenObtainPairView.as_view(), name="get_token"),
-
     path("token/refresh/", TokenRefreshView.as_view(), name="refresh_token"),
+    path('', include(router.urls)),  
 ]
