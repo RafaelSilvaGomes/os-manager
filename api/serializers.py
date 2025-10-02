@@ -1,6 +1,6 @@
 # api/serializers.py
 from django.contrib.auth.models import User
-from .models import Cliente, Servico, OrdemDeServico
+from .models import Cliente, Servico, OrdemDeServico, Material, MaterialUtilizado, Pagamento
 from rest_framework import serializers
 
 
@@ -19,13 +19,35 @@ class ServicoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Servico
         fields = ['id', 'nome', 'descricao', 'preco']
+
+class MaterialSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Material
+        fields = ['id', 'nome', 'descricao', 'preco_unidade']
+
+class MaterialUtilizadoSerializer(serializers.ModelSerializer):
+    material = MaterialSerializer(read_only=True) 
+    material_id = serializers.IntegerField(write_only=True)
+    class Meta:
+        model = MaterialUtilizado
+        fields = ['id','ordem_de_servico', 'material', 'material_id', 'quantidade']
+class PagamentoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Pagamento
+        fields = ['id', 'ordem_de_servico', 'valor_pago', 'forma_pagamento', 'data_pagamento']
+        # O campo 'data_pagamento' será preenchido automaticamente, então é apenas leitura
+        read_only_fields = ['data_pagamento']
+
 class OrdemDeServicoSerializer(serializers.ModelSerializer):
+    servicos = ServicoSerializer(many=True, read_only=True)
+    materiais_utilizados = MaterialUtilizadoSerializer(many=True, read_only=True)
     class Meta:
         model = OrdemDeServico
         fields = [
             'id', 
             'cliente', 
             'servicos', 
+            'materiais_utilizados',
             'status', 
             'data_abertura', 
             'data_finalizacao', 
