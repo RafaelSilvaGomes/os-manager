@@ -1,0 +1,78 @@
+// src/App.jsx
+import { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
+import './App.css';
+
+import LoginPage from './pages/LoginPage';
+import DashboardPage from './pages/DashboardPage';
+import ClientesPage from './pages/ClientesPage';
+import ServicosPage from './pages/ServicosPage';
+
+function App() {
+  const [token, setToken] = useState(null);
+
+  useEffect(() => {
+    const storedToken = localStorage.getItem('accessToken');
+    if (storedToken) {
+      setToken(storedToken);
+    }
+  }, []);
+
+  const handleLogin = (accessToken) => {
+    setToken(accessToken);
+    localStorage.setItem('accessToken', accessToken);
+  };
+
+  const handleLogout = () => {
+    setToken(null);
+    localStorage.removeItem('accessToken');
+  };
+
+  return (
+    <BrowserRouter>
+      <div>
+        {/* Navbar simples que aparece se o usuário estiver logado */}
+        {token && (
+          <nav>
+            <h1>Sistema OS</h1>
+            <div>
+              <Link to="/">Dashboard</Link>
+              <Link to="/clientes">Clientes</Link>
+              <Link to="/servicos">Serviços</Link>
+            </div>
+            <button onClick={handleLogout}>Sair</button>
+          </nav>
+        )}
+        
+        <main>
+          <Routes>
+            {/* Rota para o Dashboard (página principal) */}
+            <Route 
+              path="/" 
+              element={token ? <DashboardPage /> : <Navigate to="/login" />} 
+            />
+            {/* Rota para a página de Login */}
+            <Route 
+              path="/login" 
+              element={!token ? <LoginPage onLogin={handleLogin} /> : <Navigate to="/" />} 
+            />
+             <Route 
+              path="/clientes" 
+              element={token ? <ClientesPage /> : <Navigate to="/login" />} 
+            />
+            <Route 
+              path="/servicos" 
+              element={token ? <ServicosPage /> : <Navigate to="/login" />} 
+            />
+            <Route 
+              path="/login" 
+              element={!token ? <LoginPage onLogin={handleLogin} /> : <Navigate to="/" />} 
+            />  
+          </Routes>
+        </main>
+      </div>
+    </BrowserRouter>
+  );
+}
+
+export default App;
