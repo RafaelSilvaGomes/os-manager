@@ -1,7 +1,7 @@
 # api/serializers.py
 from django.contrib.auth.models import User
 from .models import Cliente, Servico, OrdemDeServico, Material, MaterialUtilizado, Pagamento
-from rest_framework import serializers
+from rest_framework import serializers, validators
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -54,4 +54,3 @@ class OrdemDeServicoSerializer(serializers.ModelSerializer):
             'data_finalizacao', 
             'valor_total'
         ]
-        read_only_fields = ['valor_total']

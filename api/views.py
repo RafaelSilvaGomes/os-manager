@@ -1,7 +1,7 @@
 # api/views.py
 from django.contrib.auth.models import User
 from rest_framework import generics, viewsets
-from .serializers import UserSerializer,ClienteSerializer, ServicoSerializer, OrdemDeServicoSerializer, MaterialSerializer, MaterialUtilizadoSerializer, PagamentoSerializer
+from .serializers import UserSerializer,ClienteSerializer, ServicoSerializer, OrdemDeServicoSerializer, MaterialSerializer, MaterialUtilizadoSerializer, PagamentoSerializer, RegisterSerializer
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Cliente, Servico, OrdemDeServico, Material, MaterialUtilizado, Pagamento
 
@@ -80,3 +80,8 @@ class PagamentoViewSet(viewsets.ModelViewSet):
         if total_pago >= ordem_de_servico.valor_total:
             ordem_de_servico.status = 'PG' 
             ordem_de_servico.save()
+            
+class RegisterView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    permission_classes = (AllowAny,)
+    serializer_class = RegisterSerializer
