@@ -1,6 +1,7 @@
 // src/App.jsx
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
+import RegisterPage from './pages/RegisterPage';
 import './App.css';
 
 import LoginPage from './pages/LoginPage';
@@ -64,6 +65,9 @@ function App() {
               path="/servicos" 
               element={token ? <ServicosPage /> : <Navigate to="/login" />} 
             />
+            <Route 
+              path="/register" 
+              element={<RegisterPage />} />
             <Route 
               path="/login" 
               element={!token ? <LoginPage onLogin={handleLogin} /> : <Navigate to="/" />} 
