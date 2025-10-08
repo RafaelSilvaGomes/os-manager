@@ -17,7 +17,7 @@ function ClientesPage() {
   // Se tiver um objeto de cliente, o formulário é de edição.
   const [editingClient, setEditingClient] = useState(null);
 
-  const fetchClientes = async () => { /* ... (função igual a antes) ... */
+  const fetchClientes = async () => { 
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) { setLoading(false); return; }
