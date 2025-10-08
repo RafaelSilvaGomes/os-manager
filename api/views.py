@@ -35,7 +35,9 @@ class OrdemDeServicoViewSet(viewsets.ModelViewSet):
         return OrdemDeServico.objects.filter(profissional=self.request.user)
 
     def perform_create(self, serializer):
-        serializer.save(profissional=self.request.user)
+        nova_os = serializer.save(profissional=self.request.user)
+        nova_os.refresh_from_db()
+        nova_os.calcular_e_salvar_total()
 
 class MaterialViewSet(viewsets.ModelViewSet):
     serializer_class = MaterialSerializer
@@ -46,6 +48,7 @@ class MaterialViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(profissional=self.request.user)
+        
 
 class MaterialUtilizadoViewSet(viewsets.ModelViewSet):
     serializer_class = MaterialUtilizadoSerializer

@@ -51,12 +51,11 @@ class OrdemDeServico(models.Model):
     profissional = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ordens_de_servico')
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='ordens_de_servico')
     servicos = models.ManyToManyField(Servico)
-    materiais = models.ManyToManyField(Material, through=MaterialUtilizado)
-
+    materiais = models.ManyToManyField(Material, through='MaterialUtilizado') # Confirme o 'through'
     status = models.CharField(max_length=2, choices=STATUS_CHOICES, default='AB')
     data_abertura = models.DateTimeField(auto_now_add=True)
     data_finalizacao = models.DateTimeField(null=True, blank=True)
-    valor_total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    valor_total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     def calcular_e_salvar_total(self):
         total_servicos = sum(servico.preco for servico in self.servicos.all())
@@ -69,7 +68,7 @@ class OrdemDeServico(models.Model):
         self.save(update_fields=['valor_total'])
 
     def __str__(self):
-        return f"Os #{self.id} - {self.cliente.nome} - {self.get_status_display()}"
+        return f"OS #{self.id} - {self.cliente.nome}"
 class Pagamento(models.Model):
     FORMAS_PAGAMENTO = [
         ('PIX', 'Pix'),

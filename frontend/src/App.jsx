@@ -7,6 +7,10 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import ClientesPage from './pages/ClientesPage';
 import ServicosPage from './pages/ServicosPage';
+import MateriaisPage from './pages/MateriaisPage';
+import OrdensDeServicoPage from './pages/OrdensDeServicoPage';
+import OrdemDeServicoCreatePage from './pages/OrdemDeServicoCreatePage';
+import OrdemDeServicoDetailPage from './pages/OrdemDeServicoDetailPage';
 
 function App() {
   const [token, setToken] = useState(null);
@@ -39,6 +43,9 @@ function App() {
               <Link to="/">Dashboard</Link>
               <Link to="/clientes">Clientes</Link>
               <Link to="/servicos">Serviços</Link>
+              <Link to="/materiais">Materiais</Link>
+              <Link to="/ordens">Ordens de Serviço</Link>
+
             </div>
             <button onClick={handleLogout}>Sair</button>
           </nav>
@@ -64,6 +71,22 @@ function App() {
               path="/servicos" 
               element={token ? <ServicosPage /> : <Navigate to="/login" />} 
             />
+            <Route 
+              path="/materiais" 
+              element={token ? <MateriaisPage /> : <Navigate to="/login" />} 
+            />
+            <Route 
+              path="/ordens" 
+              element={token ? <OrdensDeServicoPage /> : <Navigate to="/login" />} 
+            />
+             <Route 
+            path="/ordens/novo" 
+            element={token ? <OrdemDeServicoCreatePage /> : <Navigate to="/login" />} 
+          />
+          <Route 
+            path="/ordens/:id" 
+            element={token ? <OrdemDeServicoDetailPage /> : <Navigate to="/login" />} 
+          />
             <Route 
               path="/login" 
               element={!token ? <LoginPage onLogin={handleLogin} /> : <Navigate to="/" />} 

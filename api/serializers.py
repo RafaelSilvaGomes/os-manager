@@ -39,17 +39,19 @@ class PagamentoSerializer(serializers.ModelSerializer):
         read_only_fields = ['data_pagamento']
 
 class OrdemDeServicoSerializer(serializers.ModelSerializer):
-    servicos = ServicoSerializer(many=True, read_only=True)
     materiais_utilizados = MaterialUtilizadoSerializer(many=True, read_only=True)
+    servicos_details = ServicoSerializer(source='servicos', many=True, read_only=True)
     class Meta:
         model = OrdemDeServico
         fields = [
             'id', 
             'cliente', 
-            'servicos', 
+            'servicos',
+            'servicos_details', 
             'materiais_utilizados',
             'status', 
             'data_abertura', 
             'data_finalizacao', 
             'valor_total'
         ]
+        read_only_fields = ['valor_total']

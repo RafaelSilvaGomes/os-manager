@@ -18,7 +18,9 @@ label {
   margin-bottom: 0.5rem;
 }
 
-input {
+input, textarea {
+  width: 100%;
+  box-sizing: border-box;
   padding: 0.5rem;
   font-size: 1rem;
 }
