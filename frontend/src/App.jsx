@@ -73,7 +73,6 @@ function App() {
               element={token ? <ServicosPage /> : <Navigate to="/login" />} 
             />
             <Route 
-<<<<<<< HEAD
               path="/materiais" 
               element={token ? <MateriaisPage /> : <Navigate to="/login" />} 
             />
@@ -89,10 +88,9 @@ function App() {
             path="/ordens/:id" 
             element={token ? <OrdemDeServicoDetailPage /> : <Navigate to="/login" />} 
           />
-=======
+
               path="/register" 
-              element={<RegisterPage />} />
->>>>>>> 89e6fd85d81384cbee4e9f50d15ddb9e1754b2a1
+              element={<RegisterPage />} 
             <Route 
               path="/login" 
               element={!token ? <LoginPage onLogin={handleLogin} /> : <Navigate to="/" />} 
