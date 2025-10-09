@@ -14,12 +14,13 @@ from rest_framework import serializers, validators
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "username", "password"]
+        # Adicionamos os novos campos aqui
+        fields = ["id", "username", "password", "email", "first_name", "last_name"]
+        extra_kwargs = {"password": {"write_only": True}}
 
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)
         return user
-
 
 class ClienteSerializer(serializers.ModelSerializer):
     class Meta:

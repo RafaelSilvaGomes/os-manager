@@ -1,9 +1,12 @@
 // src/pages/LoginPage.jsx
+
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 
-// Note que a função de login agora é passada como uma propriedade (prop) 'onLogin'
+// 1. Importamos os componentes que vamos usar do Material-UI
+import { Button, TextField, Container, Typography, Box } from '@mui/material';
+
 function LoginPage({ onLogin }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -16,7 +19,6 @@ function LoginPage({ onLogin }) {
         password: password,
       });
       const accessToken = response.data.access;
-      // Chama a função onLogin que recebemos do App.jsx, passando o token
       onLogin(accessToken);
     } catch (error) {
       console.error('Erro no login!', error);
@@ -24,34 +26,67 @@ function LoginPage({ onLogin }) {
     }
   };
 
+  // 2. A estrutura do nosso componente agora usa os componentes do MUI
   return (
-    <div className="login-container">
-      <form onSubmit={handleSubmit}>
-        <h2>Login</h2>
-        <div className="form-group">
-          <label htmlFor="username">Usuário</label>
-          <input
-            type="text"
+    // Container centraliza o conteúdo na tela
+    <Container component="main" maxWidth="xs">
+      {/* Box é como uma <div>, mas com superpoderes de estilização */}
+      <Box
+        sx={{
+          marginTop: 8,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+        }}
+      >
+        <Typography component="h1" variant="h5">
+          Login
+        </Typography>
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+          {/* 3. O <input> vira um <TextField> estiloso */}
+          <TextField
+            margin="normal"
+            required
+            fullWidth
             id="username"
+            label="Nome de Usuário"
+            name="username"
+            autoComplete="username"
+            autoFocus
             value={username}
             onChange={(e) => setUsername(e.target.value)}
           />
-        </div>
-        <div className="form-group">
-          <label htmlFor="password">Senha</label>
-          <input
+          {/* O <input type="password"> também vira um <TextField> */}
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            name="password"
+            label="Senha"
             type="password"
             id="password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-        </div>
-        <button type="submit"className="form-button">Entrar</button>
-      </form>
-       <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-        <p>Não tem uma conta? <Link to="/register">Cadastre-se</Link></p>
-      </div>
-    </div>
+          {/* 4. O <button> vira um <Button> com animações e estilos */}
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained" // Este é o estilo de botão principal, com cor
+            sx={{ mt: 3, mb: 2 }}
+          >
+            Entrar
+          </Button>
+          <Typography variant="body2" align="center">
+            Não tem uma conta?{' '}
+            <Link to="/register" style={{ color: '#1976d2' }}>
+              Cadastre-se
+            </Link>
+          </Typography>
+        </Box>
+      </Box>
+    </Container>
   );
 }
 
