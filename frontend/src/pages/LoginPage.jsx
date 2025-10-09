@@ -1,5 +1,6 @@
 // src/pages/LoginPage.jsx
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 
 // Note que a função de login agora é passada como uma propriedade (prop) 'onLogin'
@@ -47,6 +48,9 @@ function LoginPage({ onLogin }) {
         </div>
         <button type="submit"className="form-button">Entrar</button>
       </form>
+       <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+        <p>Não tem uma conta? <Link to="/register">Cadastre-se</Link></p>
+      </div>
     </div>
   );
 }

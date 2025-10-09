@@ -65,6 +65,7 @@ class PagamentoSerializer(serializers.ModelSerializer):
 class OrdemDeServicoSerializer(serializers.ModelSerializer):
     materiais_utilizados = MaterialUtilizadoSerializer(many=True, read_only=True)
     servicos_details = ServicoSerializer(source="servicos", many=True, read_only=True)
+    pagamentos = PagamentoSerializer(many=True, read_only=True)
 
     class Meta:
         model = OrdemDeServico
@@ -74,6 +75,7 @@ class OrdemDeServicoSerializer(serializers.ModelSerializer):
             "servicos",
             "servicos_details",
             "materiais_utilizados",
+            "pagamentos",
             "status",
             "data_abertura",
             "data_finalizacao",
