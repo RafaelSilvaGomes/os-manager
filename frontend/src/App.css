@@ -6,6 +6,7 @@
   align-items: center;
   height: 100vh;
   font-family: sans-serif;
+  color:white;
 }
 
 .form-group {
@@ -16,6 +17,7 @@
 
 label {
   margin-bottom: 0.5rem;
+  color: white;
 }
 
 input, textarea {
@@ -23,6 +25,7 @@ input, textarea {
   box-sizing: border-box;
   padding: 0.5rem;
   font-size: 1rem;
+  color:white;
 }
 
 .form-button {

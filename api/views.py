@@ -1,11 +1,16 @@
 # api/views.py
 from django.contrib.auth.models import User
-from rest_framework import generics, viewsets
+from rest_framework import generics, viewsets,status, serializers
 from .serializers import UserSerializer,ClienteSerializer, ServicoSerializer, OrdemDeServicoSerializer, MaterialSerializer, MaterialUtilizadoSerializer, PagamentoSerializer, RegisterSerializer
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework import status, serializers
 from rest_framework.response import Response
 from .models import Cliente, Servico, OrdemDeServico, Material, MaterialUtilizado, Pagamento
+from rest_framework.views import APIView
+from django.utils import timezone
+from django.db.models import Sum, Value
+from django.db.models.functions import Coalesce
+from decimal import Decimal
+from django.utils import timezone
 
 class CreateUserView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -104,10 +109,46 @@ class PagamentoViewSet(viewsets.ModelViewSet):
         total_pago = sum(p.valor_pago for p in ordem_de_servico.pagamentos.all())
         
         if total_pago >= ordem_de_servico.valor_total:
-            ordem_de_servico.status = 'PG'
-            ordem_de_servico.save()
+          ordem_de_servico.status = 'PG'
+    # Adicione esta linha para registrar a data e hora atuais
+          ordem_de_servico.data_finalizacao = timezone.now() 
+          ordem_de_servico.save()
             
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = (AllowAny,)
     serializer_class = RegisterSerializer
+
+class DashboardStatsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        # Pega o usuário que está fazendo a requisição
+        profissional = request.user
+
+        # Calcula o número de OS com status 'Aberta'
+        ordens_abertas = OrdemDeServico.objects.filter(profissional=profissional, status='AB').count()
+        
+        # Calcula o número total de clientes do profissional
+        total_clientes = Cliente.objects.filter(profissional=profissional).count()
+
+        # Calcula o faturamento do mês atual
+        hoje = timezone.now()
+        faturamento_mes = OrdemDeServico.objects.filter(
+            profissional=profissional,
+            status='PG', # Apenas OS com status 'Paga'
+            data_finalizacao__year=hoje.year,
+            data_finalizacao__month=hoje.month
+        ).aggregate(
+            # Coalesce(Sum(...), Value(0)) garante que, se não houver faturamento, ele retorne 0 em vez de None
+            total=Coalesce(Sum('valor_total'), Value(Decimal('0.00')))
+        )['total']
+
+        # Monta o dicionário de dados para a resposta
+        data = {
+            'ordens_abertas': ordens_abertas,
+            'total_clientes': total_clientes,
+            'faturamento_mes': faturamento_mes
+        }
+        
+        return Response(data)

@@ -1,21 +1,32 @@
 // src/pages/OrdemDeServicoCreatePage.jsx
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; // 1. Importamos o hook de navegação
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+
+import { 
+  Box, 
+  Typography, 
+  Button, 
+  Select, 
+  MenuItem, 
+  InputLabel, 
+  FormControl,
+  FormGroup,
+  FormControlLabel,
+  Checkbox
+} from '@mui/material';
 
 function OrdemDeServicoCreatePage() {
   const [loading, setLoading] = useState(true);
   const [clientes, setClientes] = useState([]);
   const [servicos, setServicos] = useState([]);
-  const navigate = useNavigate(); // 2. Inicializamos o hook de navegação
+  const navigate = useNavigate();
 
-  // Estados para o nosso formulário
   const [clienteSelecionado, setClienteSelecionado] = useState('');
-  const [servicosSelecionados, setServicosSelecionados] = useState([]); // Agora é um array
+  const [servicosSelecionados, setServicosSelecionados] = useState([]);
 
   useEffect(() => {
-    // A função que busca os dados continua a mesma
     const fetchData = async () => {
       try {
         const token = localStorage.getItem('accessToken');
@@ -26,43 +37,37 @@ function OrdemDeServicoCreatePage() {
         ]);
         setClientes(clientesResponse.data);
         setServicos(servicosResponse.data);
-      } catch (error) { console.error("Erro ao buscar dados:", error); }
+      } catch (error) { console.error("Erro ao buscar dados para o formulário:", error); }
       finally { setLoading(false); }
     };
     fetchData();
   }, []);
 
-  // 3. Função para lidar com a seleção dos checkboxes de serviço
   const handleServicoChange = (servicoId) => {
-    // Verifica se o ID do serviço já está no array
-    if (servicosSelecionados.includes(servicoId)) {
-      // Se estiver, remove (desmarcou o checkbox)
-      setServicosSelecionados(servicosSelecionados.filter(id => id !== servicoId));
+    const id = parseInt(servicoId, 10);
+    if (servicosSelecionados.includes(id)) {
+      setServicosSelecionados(servicosSelecionados.filter(sId => sId !== id));
     } else {
-      // Se não estiver, adiciona (marcou o checkbox)
-      setServicosSelecionados([...servicosSelecionados, servicoId]);
+      setServicosSelecionados([...servicosSelecionados, id]);
     }
   };
 
-  // 4. Função para enviar o formulário para a API
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (!clienteSelecionado || servicosSelecionados.length === 0) {
+      alert("Por favor, selecione um cliente e ao menos um serviço.");
+      return;
+    }
     try {
       const token = localStorage.getItem('accessToken');
       const config = { headers: { Authorization: `Bearer ${token}` } };
-
       const novaOrdem = {
         cliente: clienteSelecionado,
         servicos: servicosSelecionados
-        // O valor_total e status serão calculados/definidos pelo backend
       };
-      
       await axios.post('http://127.0.0.1:8000/api/ordens/', novaOrdem, config);
-
       alert('Ordem de Serviço criada com sucesso!');
-      // 5. A MÁGICA: Redireciona o usuário de volta para a lista de OS
       navigate('/ordens');
-
     } catch (error) {
       console.error('Erro ao criar Ordem de Serviço:', error);
       alert('Erro ao criar Ordem de Serviço.');
@@ -73,42 +78,52 @@ function OrdemDeServicoCreatePage() {
     return <p>Carregando dados do formulário...</p>;
   }
 
-  // 6. O formulário de verdade!
   return (
-    <div className="form-container">
-      <h2>Criar Nova Ordem de Serviço</h2>
-      <form onSubmit={handleSubmit}>
+    <Box sx={{ p: 2 }}>
+      <Typography variant="h5" component="h2" gutterBottom>
+        Criar Nova Ordem de Serviço
+      </Typography>
+      <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 2 }}>
         
-        <div className="form-group">
-          <label htmlFor="cliente">Selecione o Cliente</label>
-          <select id="cliente" value={clienteSelecionado} onChange={(e) => setClienteSelecionado(e.target.value)} required>
-            <option value="">-- Escolha um cliente --</option>
+        <FormControl fullWidth required>
+          <InputLabel id="cliente-select-label">Cliente</InputLabel>
+          <Select
+            labelId="cliente-select-label"
+            id="cliente-select"
+            value={clienteSelecionado}
+            label="Cliente"
+            onChange={(e) => setClienteSelecionado(e.target.value)}
+          >
+            <MenuItem value=""><em>-- Escolha um cliente --</em></MenuItem>
             {clientes.map(cliente => (
-              <option key={cliente.id} value={cliente.id}>{cliente.nome}</option>
+              <MenuItem key={cliente.id} value={cliente.id}>{cliente.nome}</MenuItem>
             ))}
-          </select>
-        </div>
+          </Select>
+        </FormControl>
 
-        <div className="form-group">
-          <label>Selecione os Serviços</label>
-          <div className="checkbox-group">
+        <FormControl component="fieldset" variant="standard">
+          <Typography component="legend" sx={{ mb: 1 }}>Selecione os Serviços</Typography>
+          <FormGroup>
             {servicos.map(servico => (
-              <div key={servico.id} className="checkbox-item">
-                <input
-                  type="checkbox"
-                  id={`servico-${servico.id}`}
-                  value={servico.id}
-                  onChange={() => handleServicoChange(servico.id)}
-                />
-                <label htmlFor={`servico-${servico.id}`}>{servico.nome} - R$ {servico.preco}</label>
-              </div>
+              <FormControlLabel
+                key={servico.id}
+                control={
+                  <Checkbox 
+                    checked={servicosSelecionados.includes(servico.id)} 
+                    onChange={() => handleServicoChange(servico.id)} 
+                  />
+                }
+                label={`${servico.nome} - R$ ${servico.preco}`}
+              />
             ))}
-          </div>
-        </div>
+          </FormGroup>
+        </FormControl>
 
-        <button type="submit" className="form-button">Criar Ordem de Serviço</button>
-      </form>
-    </div>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Button type="submit" variant="contained">Criar Ordem de Serviço</Button>
+        </Box>
+      </Box>
+    </Box>
   );
 }
 

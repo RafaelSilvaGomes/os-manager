@@ -2,132 +2,134 @@
 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Box, Typography, TextField, Button, Card, CardContent, CardActions, Divider } from '@mui/material';
 
 function MateriaisPage() {
-  const [materiais, setMateriais] = useState([]);
-  const [loading, setLoading] = useState(true);
-  
-  // Estados para o formulário
-  const [nome, setNome] = useState('');
-  const [descricao, setDescricao] = useState('');
-  const [precoUnidade, setPrecoUnidade] = useState('');
+    const [materiais, setMateriais] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [nome, setNome] = useState('');
+    const [descricao, setDescricao] = useState('');
+    const [precoUnidade, setPrecoUnidade] = useState('');
+    const [editingMaterial, setEditingMaterial] = useState(null);
 
-  // Estado para controlar a edição
-  const [editingMaterial, setEditingMaterial] = useState(null);
+    const fetchMateriais = async () => {
+        try {
+            const token = localStorage.getItem('accessToken');
+            if (!token) { setLoading(false); return; }
+            const config = { headers: { 'Authorization': `Bearer ${token}` } };
+            const response = await axios.get('http://127.0.0.1:8000/api/materiais/', config);
+            setMateriais(response.data);
+        } catch (error) { console.error('Erro ao buscar materiais:', error); }
+        finally { setLoading(false); }
+    };
 
-  // --- FUNÇÕES DE API ---
+    useEffect(() => {
+        fetchMateriais();
+    }, []);
 
-  const fetchMateriais = async () => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) { setLoading(false); return; }
-      const config = { headers: { 'Authorization': `Bearer ${token}` } };
-      const response = await axios.get('http://127.0.0.1:8000/api/materiais/', config);
-      setMateriais(response.data);
-    } catch (error) { console.error('Erro ao buscar materiais:', error); }
-    finally { setLoading(false); }
-  };
+    const handleSubmit = async (event) => {
+        event.preventDefault();
+        if (editingMaterial) {
+            handleUpdateMaterial();
+        } else {
+            handleCreateMaterial();
+        }
+    };
 
-  useEffect(() => {
-    fetchMateriais();
-  }, []);
+    const handleCreateMaterial = async () => {
+        try {
+            const token = localStorage.getItem('accessToken');
+            const config = { headers: { 'Authorization': `Bearer ${token}` } };
+            const novoMaterial = { nome, descricao, preco_unidade: precoUnidade };
+            await axios.post('http://127.0.0.1:8000/api/materiais/', novoMaterial, config);
+            alert('Material cadastrado com sucesso!');
+            fetchMateriais();
+        } catch (error) { console.error('Erro ao cadastrar material:', error); alert('Erro ao cadastrar material.'); }
+        finally { clearForm(); }
+    };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    if (editingMaterial) {
-      handleUpdateMaterial();
-    } else {
-      handleCreateMaterial();
-    }
-  };
+    const handleUpdateMaterial = async () => {
+        try {
+            const token = localStorage.getItem('accessToken');
+            const config = { headers: { 'Authorization': `Bearer ${token}` } };
+            const materialAtualizado = { nome, descricao, preco_unidade: precoUnidade };
+            await axios.put(`http://127.0.0.1:8000/api/materiais/${editingMaterial.id}/`, materialAtualizado, config);
+            alert('Material atualizado com sucesso!');
+            fetchMateriais();
+        } catch (error) { console.error('Erro ao atualizar material:', error); alert('Erro ao atualizar material.'); }
+        finally { clearForm(); }
+    };
 
-  const handleCreateMaterial = async () => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      const config = { headers: { 'Authorization': `Bearer ${token}` } };
-      const novoMaterial = { nome, descricao, preco_unidade: precoUnidade };
-      await axios.post('http://127.0.0.1:8000/api/materiais/', novoMaterial, config);
-      alert('Material cadastrado com sucesso!');
-      fetchMateriais();
-    } catch (error) { console.error('Erro ao cadastrar material:', error); alert('Erro ao cadastrar material.'); }
-    finally { clearForm(); }
-  };
-  
-  const handleUpdateMaterial = async () => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      const config = { headers: { 'Authorization': `Bearer ${token}` } };
-      const materialAtualizado = { nome, descricao, preco_unidade: precoUnidade };
-      await axios.put(`http://127.0.0.1:8000/api/materiais/${editingMaterial.id}/`, materialAtualizado, config);
-      alert('Material atualizado com sucesso!');
-      fetchMateriais();
-    } catch (error) { console.error('Erro ao atualizar material:', error); alert('Erro ao atualizar material.'); }
-    finally { clearForm(); }
-  };
+    const handleDeleteMaterial = async (materialId) => {
+        if (window.confirm('Tem certeza que deseja deletar este material?')) {
+            try {
+                const token = localStorage.getItem('accessToken');
+                const config = { headers: { 'Authorization': `Bearer ${token}` } };
+                await axios.delete(`http://127.0.0.1:8000/api/materiais/${materialId}/`, config);
+                setMateriais(materiais.filter(material => material.id !== materialId));
+                alert('Material deletado com sucesso!');
+            } catch (error) { console.error('Erro ao deletar material:', error); alert('Erro ao deletar material.'); }
+        }
+    };
 
-  const handleDeleteMaterial = async (materialId) => {
-    if (window.confirm('Tem certeza que deseja deletar este material?')) {
-      try {
-        const token = localStorage.getItem('accessToken');
-        const config = { headers: { 'Authorization': `Bearer ${token}` } };
-        await axios.delete(`http://127.0.0.1:8000/api/materiais/${materialId}/`, config);
-        setMateriais(materiais.filter(material => material.id !== materialId));
-        alert('Material deletado com sucesso!');
-      } catch (error) { console.error('Erro ao deletar material:', error); alert('Erro ao deletar material.'); }
-    }
-  };
+    const handleEditClick = (material) => {
+        setEditingMaterial(material);
+        setNome(material.nome);
+        setDescricao(material.descricao || '');
+        setPrecoUnidade(material.preco_unidade);
+    };
 
-  // --- FUNÇÕES DE CONTROLE DO FORMULÁRIO ---
+    const clearForm = () => {
+        setNome('');
+        setDescricao('');
+        setPrecoUnidade('');
+        setEditingMaterial(null);
+    };
 
-  const handleEditClick = (material) => {
-    setEditingMaterial(material);
-    setNome(material.nome);
-    setDescricao(material.descricao);
-    setPrecoUnidade(material.preco_unidade);
-  };
+    if (loading) { return <p>Carregando materiais...</p>; }
 
-  const clearForm = () => {
-    setNome('');
-    setDescricao('');
-    setPrecoUnidade('');
-    setEditingMaterial(null);
-  };
+    return (
+        <Box sx={{ p: 2 }}>
+            <Box component="div" className="form-container">
+                <Typography variant="h5" component="h2" gutterBottom>
+                    {editingMaterial ? 'Editar Material' : 'Cadastrar Novo Material'}
+                </Typography>
+                <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <TextField label="Nome do Material" value={nome} onChange={(e) => setNome(e.target.value)} required fullWidth />
+                    <TextField label="Descrição" value={descricao} onChange={(e) => setDescricao(e.target.value)} fullWidth multiline rows={3} />
+                    <TextField label="Preço por Unidade" type="number" value={precoUnidade} onChange={(e) => setPrecoUnidade(e.target.value)} required fullWidth />
+                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                        {editingMaterial && (
+                            <Button type="button" onClick={clearForm} variant="outlined">Cancelar</Button>
+                        )}
+                        <Button type="submit" variant="contained">{editingMaterial ? 'Salvar' : 'Cadastrar'}</Button>
+                    </Box>
+                </Box>
+            </Box>
 
-  // --- RENDERIZAÇÃO ---
+            <Divider sx={{ my: 4 }} />
 
-  if (loading) { return <p>Carregando materiais...</p>; }
-
-  return (
-    <div>
-      <div className="form-container">
-        <h3>{editingMaterial ? 'Editar Material' : 'Cadastrar Novo Material'}</h3>
-        <form onSubmit={handleSubmit}>
-          <input type="text" placeholder="Nome do Material" value={nome} onChange={(e) => setNome(e.target.value)} required />
-          <textarea placeholder="Descrição" value={descricao} onChange={(e) => setDescricao(e.target.value)} />
-          <input type="number" step="0.01" placeholder="Preço por Unidade" value={precoUnidade} onChange={(e) => setPrecoUnidade(e.target.value)} required />
-          <button type="submit" className="form-button">{editingMaterial ? 'Salvar Alterações' : 'Cadastrar'}</button>
-          {editingMaterial && (
-            <button type="button" onClick={clearForm} className="cancel-btn">Cancelar</button>
-          )}
-        </form>
-      </div>
-
-      <hr />
-
-      <h2>Meus Materiais</h2>
-      <ul className="item-list">
-        {materiais.map((material) => (
-          <li key={material.id}>
-            <span>{material.nome} - R$ {material.preco_unidade}</span>
-            <div className="actions">
-              <button className="edit-btn" onClick={() => handleEditClick(material)}>Editar</button>
-              <button className="delete-btn" onClick={() => handleDeleteMaterial(material.id)}>Deletar</button>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
+            <Typography variant="h5" component="h2" gutterBottom>
+                Meus Materiais
+            </Typography>
+            
+            <Box>
+                {materiais.map((material) => (
+                    <Card key={material.id} sx={{ mb: 2 }}>
+                        <CardContent>
+                            <Typography variant="h6">{material.nome}</Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{material.descricao}</Typography>
+                            <Typography variant="h6" color="primary">R$ {material.preco_unidade} / un.</Typography>
+                        </CardContent>
+                        <CardActions>
+                            <Button size="small" onClick={() => handleEditClick(material)}>Editar</Button>
+                            <Button size="small" color="error" onClick={() => handleDeleteMaterial(material.id)}>Deletar</Button>
+                        </CardActions>
+                    </Card>
+                ))}
+            </Box>
+        </Box>
+    );
 }
 
 export default MateriaisPage;

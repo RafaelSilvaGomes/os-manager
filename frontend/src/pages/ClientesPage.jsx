@@ -11,6 +11,7 @@ function ClientesPage() {
     const [email, setEmail] = useState('');
     const [telefone, setTelefone] = useState('');
     const [editingClient, setEditingClient] = useState(null);
+    
 
     const fetchClientes = async () => {
         try {
