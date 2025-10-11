@@ -13,13 +13,16 @@ class Servico(models.Model):
 class Cliente(models.Model):
     profissional = models.ForeignKey(User, on_delete=models.CASCADE, related_name='clientes')
     nome = models.CharField(max_length=100)
-    email = models.EmailField(blank=True)
+    email = models.EmailField(blank=True, null=True)
     telefone = models.CharField(max_length=20, blank=True)
     endereco = models.CharField(max_length=255, blank=True)
+    ponto_referencia = models.CharField(max_length=255, blank=True)
+    observacoes = models.TextField(blank=True)
     data_criacao = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.nome
+    
 class Material(models.Model):
     profissional = models.ForeignKey(User, on_delete=models.CASCADE, related_name='materiais')
     nome = models.CharField(max_length=100)

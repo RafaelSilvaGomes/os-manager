@@ -1,0 +1,30 @@
+# Arquivo: os-manager/.gitignore (o principal)
+
+# Ambientes Virtuais
+venv/
+.venv/
+env/
+.env/
+
+# Python / Django
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Banco de Dados
+# IMPORTANTE: Nunca envie seu banco de dados para o repositório
+db.sqlite3
+*.sqlite3
+
+# Arquivos de Build do Frontend
+/frontend/dist/
+/frontend/node_modules/
+
+# Arquivos de IDE e Sistema Operacional
+.vscode/
+.idea/
+.DS_Store
+
+# Arquivos de Log
+*.log
