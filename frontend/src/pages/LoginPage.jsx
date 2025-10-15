@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 
-// 1. Importamos os componentes que vamos usar do Material-UI
-import { Button, TextField, Container, Typography, Box } from '@mui/material';
+// 1. Importações do Material-UI (adicionamos Paper, Avatar e um ícone)
+import { Button, TextField, Container, Typography, Box, Paper, Avatar } from '@mui/material';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined'; // Importa o ícone de cadeado
 
 function LoginPage({ onLogin }) {
   const [username, setUsername] = useState('');
@@ -22,28 +23,37 @@ function LoginPage({ onLogin }) {
       onLogin(accessToken);
     } catch (error) {
       console.error('Erro no login!', error);
-      alert('Falha no login.');
+      alert('Usuário ou senha inválidos.');
     }
   };
 
-  // 2. A estrutura do nosso componente agora usa os componentes do MUI
   return (
-    // Container centraliza o conteúdo na tela
-    <Container component="main" maxWidth="xs">
-      {/* Box é como uma <div>, mas com superpoderes de estilização */}
-      <Box
+    // 2. Usamos um Container para ocupar a tela inteira e centralizar o conteúdo
+    <Container component="main" maxWidth={false} sx={{
+      flexGrow: 1, // <-- A MUDANÇA FINAL E CORRETA É ESTA
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }}>
+      {/* 3. O Paper cria o efeito de "card" com sombra */}
+      <Paper 
+        elevation={6} // Controla a intensidade da sombra
         sx={{
-          marginTop: 8,
+          padding: 4, // Espaçamento interno (32px)
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
+          maxWidth: '400px', // Define uma largura máxima para o card
         }}
       >
+        {/* 4. Avatar com o ícone para um visual profissional */}
+        <Avatar sx={{ m: 1, bgcolor: 'primary.main' }}>
+          <LockOutlinedIcon />
+        </Avatar>
         <Typography component="h1" variant="h5">
           Login
         </Typography>
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-          {/* 3. O <input> vira um <TextField> estiloso */}
           <TextField
             margin="normal"
             required
@@ -56,7 +66,6 @@ function LoginPage({ onLogin }) {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
           />
-          {/* O <input type="password"> também vira um <TextField> */}
           <TextField
             margin="normal"
             required
@@ -69,23 +78,23 @@ function LoginPage({ onLogin }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          {/* 4. O <button> vira um <Button> com animações e estilos */}
           <Button
             type="submit"
             fullWidth
-            variant="contained" // Este é o estilo de botão principal, com cor
+            variant="contained"
             sx={{ mt: 3, mb: 2 }}
           >
             Entrar
           </Button>
           <Typography variant="body2" align="center">
             Não tem uma conta?{' '}
-            <Link to="/register" style={{ color: '#1976d2' }}>
+            {/* Usamos o componente Link do MUI para consistência */}
+            <Link to="/register" style={{ color: '#1976d2', textDecoration: 'none' }}>
               Cadastre-se
             </Link>
           </Typography>
         </Box>
-      </Box>
+      </Paper>
     </Container>
   );
 }

@@ -25,8 +25,14 @@ class UserSerializer(serializers.ModelSerializer):
 class ClienteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cliente
-        fields = ["id", "nome", "email", "telefone", "endereco", "data_criacao"]
-
+        fields = ["id", "nome", "email", "telefone", "endereco", "ponto_referencia", "observacoes", "data_criacao"]
+        extra_kwargs = {
+            'email': {'required': False, 'allow_blank': True},
+            'telefone': {'required': False, 'allow_blank': True},
+            'endereco': {'required': False, 'allow_blank': True},
+            'ponto_referencia': {'required': False, 'allow_blank': True},
+            'observacoes': {'required': False, 'allow_blank': True},
+        }
 
 class ServicoSerializer(serializers.ModelSerializer):
     class Meta:
