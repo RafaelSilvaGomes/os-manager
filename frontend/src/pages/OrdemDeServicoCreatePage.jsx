@@ -185,21 +185,32 @@ function OrdemDeServicoCreatePage({ onLogout }) {
         Criar Nova Ordem de Serviço
       </Typography>
 
-      {/* --- SEÇÃO DO CLIENTE E ENDEREÇO --- */}
+      {/* --- SEÇÃO DO CLIENTE E ENDEREÇO (3 COLUNAS) --- */}
       <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" gutterBottom>
           Dados do Cliente e Serviço
         </Typography>
 
-        <Grid container spacing={2}>
-          {/* Linha 1, Coluna 1: Cliente */}
-          <Grid item xs={12} md={6}>
+        {/* O contêiner Flexbox principal */}
+        <Box
+          sx={{
+            display: "flex",
+            gap: 2, // Espaçamento entre os campos
+            // Em telas pequenas (xs), os campos ficam em coluna
+            // Em telas médias (md) ou maiores, ficam em linha
+            flexDirection: { xs: "column", md: "row" },
+          }}
+        >
+          {/* Coluna 1: Cliente - Ocupa 1/3 do espaço */}
+          <Box sx={{ flex: 1 }}>
+            {" "}
+            {/* flex: 1 faz ele ocupar o espaço disponível */}
             <FormControl fullWidth required>
               <InputLabel id="cliente-select-label">Cliente</InputLabel>
               <Select
                 labelId="cliente-select-label"
                 value={clienteId}
-                label="Cliente" // A propriedade que corrige o tamanho
+                label="Cliente"
                 onChange={handleClienteChange}
               >
                 {clientes.map((cliente) => (
@@ -209,21 +220,26 @@ function OrdemDeServicoCreatePage({ onLogout }) {
                 ))}
               </Select>
             </FormControl>
-          </Grid>
+          </Box>
 
-          {/* Linha 1, Coluna 2: Data/Hora */}
-          <Grid item xs={12} md={6}>
+          {/* Coluna 2: Data/Hora - Ocupa 1/3 do espaço */}
+          <Box sx={{ flex: 1 }}>
+            {" "}
+            {/* flex: 1 faz ele ocupar o espaço disponível */}
             <DateTimePicker
               label="Data e Hora do Agendamento"
               value={dataAgendamento}
               onChange={(newValue) => setDataAgendamento(newValue)}
-              // renderInput é a forma correta de aplicar o fullWidth
               renderInput={(params) => <TextField {...params} fullWidth />}
+              // ADICIONE ESTA LINHA: Força o componente a usar 100% da largura do Box pai
+              sx={{ width: "100%" }}
             />
-          </Grid>
+          </Box>
 
-          {/* Linha 2: Endereço (ocupa a linha inteira) */}
-          <Grid item xs={12}>
+          {/* Coluna 3: Endereço - Ocupa 1/3 do espaço */}
+          <Box sx={{ flex: 1 }}>
+            {" "}
+            {/* flex: 1 faz ele ocupar o espaço disponível */}
             <TextField
               label="Endereço de Realização do Serviço"
               value={enderecoServico}
@@ -231,8 +247,8 @@ function OrdemDeServicoCreatePage({ onLogout }) {
               fullWidth
               required
             />
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Paper>
 
       {/* --- SEÇÃO DE SERVIÇOS --- */}
