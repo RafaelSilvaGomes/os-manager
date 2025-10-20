@@ -27,10 +27,11 @@ class Material(models.Model):
     profissional = models.ForeignKey(User, on_delete=models.CASCADE, related_name='materiais')
     nome = models.CharField(max_length=100)
     descricao = models.TextField(blank=True)
+    unidade_medida = models.CharField(max_length=20, blank=True, default='un') 
     preco_unidade = models.DecimalField(max_digits=10, decimal_places=2)
 
     def __str__(self):
-        return f"{self.nome} (R$ {self.preco_unidade})"
+        return f"{self.nome} (R$ {self.preco_unidade} / {self.unidade_medida})"
 
 
 class MaterialUtilizado(models.Model):
@@ -54,13 +55,21 @@ class OrdemDeServico(models.Model):
     profissional = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ordens_de_servico')
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='ordens_de_servico')
     servicos = models.ManyToManyField(Servico)
-    materiais = models.ManyToManyField(Material, through='MaterialUtilizado') # Confirme o 'through'
+    materiais = models.ManyToManyField(Material, through='MaterialUtilizado')
     status = models.CharField(max_length=2, choices=STATUS_CHOICES, default='AB')
     data_abertura = models.DateTimeField(auto_now_add=True)
     data_finalizacao = models.DateTimeField(null=True, blank=True)
     valor_total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
+    # --- NOVOS CAMPOS ADICIONADOS ---
+    # Para o endereço onde o serviço será de fato realizado
+    endereco_servico = models.CharField(max_length=255, blank=True)
+    # Para a data que o serviço foi agendado (diferente da data que a OS foi criada)
+    data_agendamento = models.DateTimeField(null=True, blank=True)
+    # --- FIM DOS NOVOS CAMPOS ---
+
     def calcular_e_salvar_total(self):
+        # Esta sua função já está perfeita!
         total_servicos = sum(servico.preco for servico in self.servicos.all())
 
         total_materiais = sum(
@@ -72,6 +81,7 @@ class OrdemDeServico(models.Model):
 
     def __str__(self):
         return f"OS #{self.id} - {self.cliente.nome}"
+    
 class Pagamento(models.Model):
     FORMAS_PAGAMENTO = [
         ('PIX', 'Pix'),

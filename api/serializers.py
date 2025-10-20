@@ -43,18 +43,24 @@ class ServicoSerializer(serializers.ModelSerializer):
 class MaterialSerializer(serializers.ModelSerializer):
     class Meta:
         model = Material
-        fields = ["id", "nome", "descricao", "preco_unidade"]
+        fields = ["id", "nome", "descricao", "preco_unidade", "unidade_medida"] 
+        extra_kwargs = {
+            'descricao': {'required': False, 'allow_blank': True},
+            'unidade_medida': {'required': False, 'allow_blank': True},
+        }
 
 
 class MaterialUtilizadoSerializer(serializers.ModelSerializer):
     material = MaterialSerializer(read_only=True)
-    material_id = serializers.IntegerField(write_only=True)
-
+    
     class Meta:
         model = MaterialUtilizado
-        fields = ["id", "ordem_de_servico", "material", "material_id", "quantidade"]
+        fields = ["id", "material", "quantidade"]
 
-
+class MaterialUtilizadoWriteSerializer(serializers.Serializer):
+    material_id = serializers.IntegerField()
+    quantidade = serializers.IntegerField()
+    
 class PagamentoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pagamento
@@ -70,24 +76,58 @@ class PagamentoSerializer(serializers.ModelSerializer):
 
 
 class OrdemDeServicoSerializer(serializers.ModelSerializer):
+    servicos = ServicoSerializer(many=True, read_only=True)
     materiais_utilizados = MaterialUtilizadoSerializer(many=True, read_only=True)
-    servicos_details = ServicoSerializer(source="servicos", many=True, read_only=True)
     pagamentos = PagamentoSerializer(many=True, read_only=True)
+    cliente = ClienteSerializer(read_only=True) 
+
+    cliente_id = serializers.IntegerField(write_only=True)
+    servicos_ids = serializers.ListField(
+        child=serializers.IntegerField(), write_only=True
+    )
+    materiais_para_adicionar = MaterialUtilizadoWriteSerializer(many=True, write_only=True)
 
     class Meta:
         model = OrdemDeServico
         fields = [
             "id",
             "cliente",
+            "cliente_id", 
             "servicos",
-            "servicos_details",
+            "servicos_ids", 
             "materiais_utilizados",
+            "materiais_para_adicionar",
             "pagamentos",
             "status",
             "data_abertura",
             "data_finalizacao",
             "valor_total",
+            "endereco_servico",
+            "data_agendamento", 
         ]
+
+        read_only_fields = ["valor_total", "data_abertura"]
+
+    def create(self, validated_data):
+        servicos_data = validated_data.pop('servicos_ids')
+        materiais_data = validated_data.pop('materiais_para_adicionar')
+
+        validated_data['cliente_id'] = validated_data.pop('cliente_id')
+
+        ordem_de_servico = OrdemDeServico.objects.create(**validated_data)
+
+        ordem_de_servico.servicos.set(servicos_data)
+        
+        for item in materiais_data:
+            MaterialUtilizado.objects.create(
+                ordem_de_servico=ordem_de_servico,
+                material_id=item['material_id'],
+                quantidade=item['quantidade']
+            )
+
+        ordem_de_servico.calcular_e_salvar_total()
+
+        return ordem_de_servico
 
 
 class RegisterSerializer(serializers.ModelSerializer):
