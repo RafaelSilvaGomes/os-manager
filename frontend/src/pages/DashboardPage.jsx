@@ -1,10 +1,8 @@
-// src/pages/DashboardPage.jsx (Refatorado com CSS Grid)
-
 import { useState, useEffect } from "react";
 import axios from "axios";
 import {
   Box,
-  Card, // <--- Grid foi REMOVIDO
+  Card,
   CardContent,
   Typography,
   CircularProgress,
@@ -20,13 +18,14 @@ import {
   CheckCircle as CheckCircleIcon,
   Lightbulb as LightbulbIcon,
 } from "@mui/icons-material";
-import { useTheme } from "@mui/material/styles"; // Importamos o useTheme
+import { useTheme } from "@mui/material/styles";
 
 function DashboardPage({ onLogout }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const theme = useTheme(); // Hook para acessar o tema (necessário para os breakpoints)
 
+  // Re-utilizamos a função de busca de estatísticas que você já fez
   useEffect(() => {
     const fetchStats = async () => {
       try {
