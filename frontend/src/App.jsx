@@ -1,17 +1,47 @@
-// src/App.jsx
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import { useState, useEffect, useMemo } from "react";
+// src/App.jsx (VERSÃO ATUALIZADA COM CONFIGURAÇÕES E TEMAS)
+
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { BrowserRouter, Routes, Route, Navigate, Link } from "react-router-dom";
 import "./App.css";
 
-// --- IMPORTAÇÕES DO TEMA ---
-import { ThemeProvider, createTheme } from "@mui/material/styles";
-import CssBaseline from "@mui/material/CssBaseline";
-import useMediaQuery from "@mui/material/useMediaQuery"; // 2. Importamos o hook para detectar a preferência
-import { AppBar, Toolbar, Typography, Button, Box } from "@mui/material";
+// --- Importações MUI ---
+import {
+  ThemeProvider,
+  createTheme,
+  CssBaseline,
+  alpha,
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  Box,
+  IconButton,
+  Menu,
+  MenuItem,
+  Switch,
+  FormControlLabel,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Card,
+  CardActionArea,
+  CardContent,
+} from "@mui/material";
+import SettingsIcon from "@mui/icons-material/Settings";
+import ElectricBoltIcon from "@mui/icons-material/ElectricBolt";
+import BuildIcon from "@mui/icons-material/Build";
+import GrassIcon from "@mui/icons-material/Grass";
+import WaterDropIcon from "@mui/icons-material/WaterDrop";
+import FormatPaintIcon from "@mui/icons-material/FormatPaint";
+import ComputerIcon from "@mui/icons-material/Computer";
+import AcUnitIcon from "@mui/icons-material/AcUnit";
+import CarpenterIcon from "@mui/icons-material/Carpenter";
+import CleaningServicesIcon from "@mui/icons-material/CleaningServices";
+import VpnKeyIcon from "@mui/icons-material/VpnKey";
 
-// Importações das Nossas Páginas
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -22,46 +52,120 @@ import OrdensDeServicoPage from "./pages/OrdensDeServicoPage";
 import OrdemDeServicoCreatePage from "./pages/OrdemDeServicoCreatePage";
 import OrdemDeServicoDetailPage from "./pages/OrdemDeServicoDetailPage";
 
+const professionPalettes = {
+  eletricista: {
+    primary: { main: "#0d47a1" },
+    name: "Eletricista",
+    icon: <ElectricBoltIcon />,
+  },
+  pedreiro: {
+    primary: { main: "#b71c1c" },
+    name: "Pedreiro",
+    icon: <BuildIcon />,
+  },
+  jardineiro: {
+    primary: { main: "#1b5e20" },
+    name: "Jardineiro",
+    icon: <GrassIcon />,
+  },
+  encanador: {
+    primary: { main: "#01579b" },
+    name: "Encanador",
+    icon: <WaterDropIcon />,
+  },
+  pintor: {
+    primary: { main: "#e65100" },
+    name: "Pintor",
+    icon: <FormatPaintIcon />,
+  },
+  informatica: {
+    primary: { main: "#4a148c" },
+    name: "Téc. Informática",
+    icon: <ComputerIcon />,
+  },
+  ar_condicionado: {
+    primary: { main: "#006064" },
+    name: "Téc. Ar Cond.",
+    icon: <AcUnitIcon />,
+  },
+  marceneiro: {
+    primary: { main: "#3e2723" },
+    name: "Marceneiro",
+    icon: <CarpenterIcon />,
+  },
+  limpeza: {
+    primary: { main: "#42a5f5" },
+    name: "Limpeza/Diarista",
+    icon: <CleaningServicesIcon />,
+  },
+  chaveiro: {
+    primary: { main: "#607d8b" },
+    name: "Chaveiro",
+    icon: <VpnKeyIcon />,
+  },
+};
+
 function App() {
   const [token, setToken] = useState(null);
 
-  // 3. Detectamos se o usuário prefere o modo escuro
-  const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
-
-  // 4. Criamos o tema dinamicamente com base na preferência do usuário
-  const theme = useMemo(
-    () =>
-      createTheme({
-        palette: {
-          mode: prefersDarkMode ? "dark" : "light",
-
-          ...(prefersDarkMode
-            ? {
-                primary: { main: "#61AFEF" },
-                background: {
-                  default: "#1C2025",
-                  paper: "#282C34",
-                },
-                text: {
-                  primary: "rgba(255, 255, 255, 0.87)",
-                },
-              }
-            : {
-                primary: {
-                  main: "#1976d2",
-                },
-              }),
-        },
-      }),
-    [prefersDarkMode]
+  const [themeMode, setThemeMode] = useState(
+    () => localStorage.getItem("themeMode") || "light"
   );
+  const firstProfessionKey = Object.keys(professionPalettes)[0];
+  const [profession, setProfession] = useState(
+    () => localStorage.getItem("profession") || firstProfessionKey
+  );
+
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [openProfessionDialog, setOpenProfessionDialog] = useState(false);
+  const openMenu = Boolean(anchorEl);
+
+  const theme = useMemo(() => {
+    const currentPalette =
+      professionPalettes[profession] || professionPalettes[firstProfessionKey];
+
+    return createTheme({
+      palette: {
+        mode: themeMode,
+        primary: currentPalette.primary,
+
+        ...(themeMode === "dark" && {
+          background: {
+            default: "#1C2025",
+            paper: "#282C34",
+          },
+        }),
+      },
+    });
+  }, [themeMode, profession]);
 
   useEffect(() => {
     const storedToken = localStorage.getItem("accessToken");
     if (storedToken) {
       setToken(storedToken);
     }
-  }, []);
+    document.body.className = themeMode;
+  }, [themeMode]);
+
+  const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
+  const handleMenuClose = () => setAnchorEl(null);
+  const handleOpenProfessionDialog = () => {
+    setOpenProfessionDialog(true);
+    handleMenuClose();
+  };
+  const handleCloseProfessionDialog = () => setOpenProfessionDialog(false);
+
+  const toggleThemeMode = () => {
+    const newMode = themeMode === "light" ? "dark" : "light";
+    setThemeMode(newMode);
+    localStorage.setItem("themeMode", newMode);
+  };
+
+  const handleProfessionChange = (newProfession) => {
+    setProfession(newProfession);
+    localStorage.setItem("profession", newProfession);
+    handleCloseProfessionDialog();
+  };
 
   const handleLogin = (accessToken) => {
     setToken(accessToken);
@@ -74,11 +178,9 @@ function App() {
   };
 
   return (
-    // 5. Usamos o nosso novo tema dinâmico
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <ThemeProvider theme={theme}>
-        <CssBaseline />{" "}
-        {/* Agora ele aplicará o fundo claro ou escuro corretamente */}
+        <CssBaseline />
         <BrowserRouter>
           <Box
             sx={{
@@ -90,30 +192,250 @@ function App() {
             {token && (
               <AppBar position="static">
                 <Toolbar>
-                  <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                    Sistema OS
+                  <Typography
+                    variant="h6"
+                    component="div"
+                    // Adicionamos display:flex para alinhar o ícone e o texto
+                    sx={{
+                      mr: 2,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1, // Controla o espaço entre o ícone e o texto
+                    }}
+                  >
+                    {/*
+                      Aqui, buscamos o ícone da profissão atual 
+                      no seu objeto 'professionPalettes'.
+                    */}
+                    {
+                      (
+                        professionPalettes[profession] ||
+                        professionPalettes[firstProfessionKey]
+                      ).icon
+                    }
+                    {/* Seu novo texto */}
+                    OS Manager
                   </Typography>
-                  <Button component={Link} to="/" color="inherit">
-                    Dashboard
-                  </Button>
-                  <Button component={Link} to="/clientes" color="inherit">
-                    Clientes
-                  </Button>
-                  <Button component={Link} to="/servicos" color="inherit">
-                    Serviços
-                  </Button>
-                  <Button component={Link} to="/materiais" color="inherit">
-                    Materiais
-                  </Button>
-                  <Button component={Link} to="/ordens" color="inherit">
-                    Ordens de Serviço
-                  </Button>
-                  <Button onClick={handleLogout} color="inherit">
+
+                  <Box
+                    sx={{
+                      flexGrow: 1,
+                      display: "flex",
+                      gap: 1,
+                      justifyContent: "center", // <--- ADICIONE ESTA LINHA
+                    }}
+                  >
+                    <Button
+                      component={Link}
+                      to="/"
+                      color="inherit"
+                      size="small"
+                      sx={{
+                        padding: "6px 12px",
+                        borderRadius: 1,
+                        "&:hover": {
+                          backgroundColor: theme.palette.primary.contrastText,
+                          color: theme.palette.primary.main,
+                        },
+                      }}
+                    >
+                      Dashboard
+                    </Button>
+                    <Button
+                      component={Link}
+                      to="/clientes"
+                      color="inherit"
+                      size="small"
+                      sx={{
+                        padding: "6px 12px",
+                        borderRadius: 1,
+                        "&:hover": {
+                          backgroundColor: theme.palette.primary.contrastText,
+                          color: theme.palette.primary.main,
+                        },
+                      }}
+                    >
+                      Clientes
+                    </Button>
+                    <Button
+                      component={Link}
+                      to="/servicos"
+                      color="inherit"
+                      size="small"
+                      sx={{
+                        padding: "6px 12px",
+                        borderRadius: 1,
+                        "&:hover": {
+                          backgroundColor: theme.palette.primary.contrastText,
+                          color: theme.palette.primary.main,
+                        },
+                      }}
+                    >
+                      Serviços
+                    </Button>
+                    <Button
+                      component={Link}
+                      to="/materiais"
+                      color="inherit"
+                      size="small"
+                      sx={{
+                        padding: "6px 12px",
+                        borderRadius: 1,
+                        "&:hover": {
+                          backgroundColor: theme.palette.primary.contrastText,
+                          color: theme.palette.primary.main,
+                        },
+                      }}
+                    >
+                      Materiais
+                    </Button>
+                    <Button
+                      component={Link}
+                      to="/ordens"
+                      color="inherit"
+                      size="small"
+                      sx={{
+                        padding: "6px 12px",
+                        borderRadius: 1,
+                        "&:hover": {
+                          backgroundColor: theme.palette.primary.contrastText,
+                          color: theme.palette.primary.main,
+                        },
+                      }}
+                    >
+                      Ordens
+                    </Button>
+                  </Box>
+
+                  <Button
+                    onClick={handleLogout}
+                    color="inherit"
+                    size="small"
+                    sx={{
+                      padding: "6px 12px",
+                      borderRadius: 1,
+                      "&:hover": {
+                        backgroundColor: theme.palette.primary.contrastText,
+                        color: theme.palette.primary.main,
+                      },
+                    }}
+                  >
                     Sair
                   </Button>
+                  <IconButton
+                    color="inherit"
+                    aria-label="configurações"
+                    aria-controls="settings-menu"
+                    aria-haspopup="true"
+                    onClick={handleMenuOpen}
+                    sx={{
+                      padding: "6px 12px",
+                      borderRadius: 1,
+                      "&:hover": {
+                        backgroundColor: alpha(
+                          theme.palette.primary.contrastText,
+                          0.12
+                        ),
+                      },
+                    }}
+                  >
+                    <SettingsIcon />
+                  </IconButton>
                 </Toolbar>
               </AppBar>
             )}
+
+            <Menu
+              id="settings-menu"
+              anchorEl={anchorEl}
+              open={openMenu}
+              onClose={handleMenuClose}
+              MenuListProps={{ "aria-labelledby": "settings-button" }}
+            >
+              <MenuItem onClick={handleOpenProfessionDialog}>
+                Mudar Profissão
+              </MenuItem>
+              <MenuItem>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={themeMode === "dark"}
+                      onChange={toggleThemeMode}
+                    />
+                  }
+                  label={themeMode === "dark" ? "Modo Escuro" : "Modo Claro"}
+                />
+              </MenuItem>
+            </Menu>
+
+            <Dialog
+              open={openProfessionDialog}
+              onClose={handleCloseProfessionDialog}
+              maxWidth="sm"
+            >
+              <DialogTitle>Selecione sua Profissão</DialogTitle>
+              <DialogContent>
+                <Box
+                  sx={{
+                    display: "grid",
+                    gap: 2,
+                    pt: 1,
+
+                    gridTemplateColumns: "repeat(2, 1fr)",
+
+                    [theme.breakpoints.up("sm")]: {
+                      gridTemplateColumns: "repeat(3, 1fr)",
+                    },
+                  }}
+                >
+                  {Object.entries(professionPalettes).map(([key, value]) => (
+                    <Card key={key} sx={{ width: "100%" }}>
+                      <CardActionArea
+                        onClick={() => handleProfessionChange(key)}
+                        sx={{
+                          height: "100%",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          p: 2,
+                          backgroundColor: value.primary.main,
+                          color: theme.palette.getContrastText(
+                            value.primary.main
+                          ),
+                          "&:hover": {
+                            backgroundColor:
+                              value.primary.dark || value.primary.main,
+                            opacity: 0.9,
+                          },
+                        }}
+                      >
+                        {/* Ícone */}
+                        {value.icon ? (
+                          <value.icon.type
+                            {...value.icon.props}
+                            sx={{ fontSize: 40, mb: 1 }}
+                          />
+                        ) : (
+                          <BuildIcon sx={{ fontSize: 40, mb: 1 }} />
+                        )}
+                        {/* Nome da Profissão */}
+                        <Typography
+                          variant="body1"
+                          component="div"
+                          sx={{ textAlign: "center" }}
+                        >
+                          {value.name}
+                        </Typography>
+                      </CardActionArea>
+                    </Card>
+                  ))}
+                </Box>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={handleCloseProfessionDialog}>Cancelar</Button>
+              </DialogActions>
+            </Dialog>
 
             <Box
               component="main"
@@ -127,17 +449,17 @@ function App() {
               <Routes>
                 <Route
                   path="/"
-                  element={token ? <DashboardPage /> : <Navigate to="/login" />}
-                />
-                <Route
-                  path="/clientes"
                   element={
                     token ? (
-                      <ClientesPage onLogout={handleLogout} />
+                      <DashboardPage onLogout={handleLogout} />
                     ) : (
                       <Navigate to="/login" />
                     )
                   }
+                />
+                <Route
+                  path="/clientes"
+                  element={token ? <ClientesPage /> : <Navigate to="/login" />}
                 />
                 <Route
                   path="/servicos"
@@ -145,7 +467,13 @@ function App() {
                 />
                 <Route
                   path="/materiais"
-                  element={token ? <MateriaisPage /> : <Navigate to="/login" />}
+                  element={
+                    token ? (
+                      <MateriaisPage onLogout={handleLogout} />
+                    ) : (
+                      <Navigate to="/login" />
+                    )
+                  }
                 />
                 <Route
                   path="/ordens"

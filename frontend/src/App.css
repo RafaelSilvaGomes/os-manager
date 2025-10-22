@@ -3,19 +3,19 @@ label {
   color: white;
 }
 
-input, textarea {
+input,
+textarea {
   width: 100%;
   box-sizing: border-box;
   padding: 0.5rem;
   font-size: 1rem;
-  color:white;
+  color: white;
 }
 
 .form-button {
   padding: 0.75rem;
   font-size: 1rem;
   cursor: pointer;
-
 }
 
 .cancel-btn {
@@ -26,7 +26,7 @@ input, textarea {
   font-size: 1rem;
   cursor: pointer;
   width: 100%;
-  margin-top: 0.5rem; 
+  margin-top: 0.5rem;
 }
 
 .item-list {
@@ -54,8 +54,7 @@ input, textarea {
 }
 
 .edit-btn {
-  background-color: #008CBA;
+  background-color: #008cba;
   color: white;
   border: none;
 }
-

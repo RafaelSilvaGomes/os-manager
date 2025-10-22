@@ -1,4 +1,4 @@
-// src/pages/OrdemDeServicoCreatePage.jsx
+// src/pages/OrdemDeServicoCreatePage.jsx (VERSÃO MODERNA)
 
 import { useState, useEffect } from "react";
 import axios from "axios";
@@ -9,28 +9,35 @@ import {
   TextField,
   Button,
   Paper,
-  Grid,
+  // Grid foi removido
   FormControl,
   InputLabel,
   Select,
   MenuItem,
   OutlinedInput,
   Chip,
-  List,
-  ListItem,
-  ListItemText,
-  IconButton,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableRow,
   TableContainer,
+  IconButton,
+  CircularProgress, // NOVO
+  Snackbar, // NOVO
+  Alert, // NOVO
+  useTheme, // NOVO
 } from "@mui/material";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import DeleteIcon from "@mui/icons-material/Delete";
+import AddIcon from "@mui/icons-material/Add";
+import SaveIcon from "@mui/icons-material/Save";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import DesignServicesIcon from "@mui/icons-material/DesignServices";
+import Inventory2Icon from "@mui/icons-material/Inventory2";
 
-// Hook para obter o token (você pode colocar isso em um arquivo 'auth.js' depois)
+// Hook (mantido)
 const useAuthToken = () => {
   return localStorage.getItem("accessToken");
 };
@@ -38,26 +45,36 @@ const useAuthToken = () => {
 function OrdemDeServicoCreatePage({ onLogout }) {
   const navigate = useNavigate();
   const token = useAuthToken();
+  const theme = useTheme(); // NOVO
 
-  // --- Estados para os dados principais da OS ---
+  // --- Estados principais da OS (mantidos) ---
   const [clienteId, setClienteId] = useState("");
   const [enderecoServico, setEnderecoServico] = useState("");
   const [dataAgendamento, setDataAgendamento] = useState(null);
   const [servicosIds, setServicosIds] = useState([]);
 
-  // --- Estados para as listas de dropdowns ---
+  // --- Estados de dropdowns (mantidos) ---
   const [clientes, setClientes] = useState([]);
   const [servicos, setServicos] = useState([]);
   const [materiais, setMateriais] = useState([]);
 
-  // --- Estados para o "Carrinho" de Materiais ---
+  // --- Estados do "Carrinho" (mantidos) ---
   const [materiaisNoCarrinho, setMateriaisNoCarrinho] = useState([]);
   const [materialSelecionado, setMaterialSelecionado] = useState("");
   const [quantidadeMaterial, setQuantidadeMaterial] = useState(1);
 
-  // 1. BUSCAR TODOS OS DADOS NECESSÁRIOS (Clientes, Serviços, Materiais)
+  // --- NOVO: Estados de UX ---
+  const [loading, setLoading] = useState(true); // Para o carregamento inicial
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  // 1. BUSCAR DADOS (com loading e snackbar)
   useEffect(() => {
     const config = { headers: { Authorization: `Bearer ${token}` } };
+    setLoading(true);
 
     const fetchClientes = axios.get(
       "http://127.0.0.1:8000/api/clientes/",
@@ -72,7 +89,6 @@ function OrdemDeServicoCreatePage({ onLogout }) {
       config
     );
 
-    // Usamos Promise.all para fazer as 3 requisições em paralelo
     Promise.all([fetchClientes, fetchServicos, fetchMateriais])
       .then((responses) => {
         setClientes(responses[0].data);
@@ -82,53 +98,69 @@ function OrdemDeServicoCreatePage({ onLogout }) {
       .catch((error) => {
         console.error("Erro ao buscar dados:", error);
         if (error.response && error.response.status === 401) {
-          alert("Sua sessão expirou. Faça login novamente.");
+          // ALTERADO: Substituído alert()
+          setSnackbar({
+            open: true,
+            message: "Sua sessão expirou. Faça login novamente.",
+            severity: "error",
+          });
           onLogout();
+        } else {
+          setSnackbar({
+            open: true,
+            message: "Erro ao carregar dados iniciais.",
+            severity: "error",
+          });
         }
+      })
+      .finally(() => {
+        setLoading(false); // NOVO
       });
   }, [token, onLogout]);
 
-  // 2. FUNÇÃO PARA PREENCHER O ENDEREÇO
+  // 2. FUNÇÃO handleClienteChange (mantida)
   const handleClienteChange = (e) => {
     const id = e.target.value;
     setClienteId(id);
-
-    // Acha o cliente na lista e preenche o endereço
     const clienteSelecionado = clientes.find((c) => c.id === id);
     if (clienteSelecionado) {
       setEnderecoServico(clienteSelecionado.endereco || "");
     }
   };
 
-  // 3. FUNÇÕES DO "CARRINHO" DE MATERIAIS
+  // 3. FUNÇÕES DO "CARRINHO" (com snackbar)
   const handleAdicionarMaterial = () => {
     if (!materialSelecionado || quantidadeMaterial <= 0) {
-      alert("Selecione um material e uma quantidade válida.");
+      // ALTERADO: Substituído alert()
+      setSnackbar({
+        open: true,
+        message: "Selecione um material e uma quantidade válida.",
+        severity: "warning",
+      });
       return;
     }
-
-    // Verifica se o material já está no carrinho
     const jaExiste = materiaisNoCarrinho.find(
       (item) => item.material_id === materialSelecionado
     );
     if (jaExiste) {
-      alert("Este material já foi adicionado.");
+      // ALTERADO: Substituído alert()
+      setSnackbar({
+        open: true,
+        message: "Este material já foi adicionado.",
+        severity: "info",
+      });
       return;
     }
-
     const material = materiais.find((m) => m.id === materialSelecionado);
-
     setMateriaisNoCarrinho([
       ...materiaisNoCarrinho,
       {
         material_id: material.id,
-        nome: material.nome, // Usamos o 'nome' apenas para exibir na tabela
+        nome: material.nome,
         unidade_medida: material.unidade_medida,
         quantidade: parseInt(quantidadeMaterial, 10),
       },
     ]);
-
-    // Limpa os campos de seleção
     setMaterialSelecionado("");
     setQuantidadeMaterial(1);
   };
@@ -139,24 +171,21 @@ function OrdemDeServicoCreatePage({ onLogout }) {
     );
   };
 
-  // 4. FUNÇÃO DE SUBMISSÃO (A MAIS IMPORTANTE)
+  // 4. FUNÇÃO DE SUBMISSÃO (com snackbar)
   const handleSubmit = async (event) => {
     event.preventDefault();
-
-    // Formata os materiais para enviar para a API (só ID e quantidade)
     const materiaisParaEnviar = materiaisNoCarrinho.map((item) => ({
       material_id: item.material_id,
       quantidade: item.quantidade,
     }));
 
-    // Monta o payload final
     const payload = {
       cliente_id: parseInt(clienteId, 10),
       endereco_servico: enderecoServico,
       data_agendamento: dataAgendamento ? dataAgendamento.toISOString() : null,
       servicos_ids: servicosIds,
       materiais_para_adicionar: materiaisParaEnviar,
-      status: "AB", // 'AB' = Aberta (conforme seu models.py)
+      status: "AB",
     };
 
     try {
@@ -166,96 +195,119 @@ function OrdemDeServicoCreatePage({ onLogout }) {
         payload,
         config
       );
-
-      alert("Ordem de Serviço criada com sucesso!");
-      // Navega para a página de detalhes da OS recém-criada
+      // O alert() de sucesso é substituído pela navegação
       navigate(`/ordens/${response.data.id}`);
     } catch (error) {
       console.error("Erro ao criar OS:", error.response?.data || error);
-      alert("Erro ao criar Ordem de Serviço.");
+      // ALTERADO: Substituído alert()
+      setSnackbar({
+        open: true,
+        message: "Erro ao criar Ordem de Serviço.",
+        severity: "error",
+      });
       if (error.response && error.response.status === 401) {
         onLogout();
       }
     }
   };
 
+  // NOVO: Handler do Snackbar
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === "clickaway") {
+      return;
+    }
+    setSnackbar({ ...snackbar, open: false });
+  };
+
+  // NOVO: Estado de Loading
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "80vh",
+        }}
+      >
+        <CircularProgress />
+        <Typography sx={{ ml: 2 }}>Carregando dados...</Typography>
+      </Box>
+    );
+  }
+
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ p: 2 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Criar Nova Ordem de Serviço
-      </Typography>
-
-      {/* --- SEÇÃO DO CLIENTE E ENDEREÇO (3 COLUNAS) --- */}
-      <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Dados do Cliente e Serviço
+    <Box component="form" onSubmit={handleSubmit} sx={{ pb: 4 }}>
+      {" "}
+      {/* Padding no final */}
+      {/* ALTERADO: Título com ícone */}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+        <ReceiptLongIcon fontSize="large" />
+        <Typography variant="h4" component="h1">
+          Criar Nova Ordem de Serviço
         </Typography>
+      </Box>
+      {/* --- SEÇÃO DO CLIENTE E ENDEREÇO (CSS GRID) --- */}
+      <Paper elevation={3} sx={{ p: 3, mb: 3, overflow: "hidden" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+          <AccountCircleIcon />
+          <Typography variant="h6">Dados do Cliente e Serviço</Typography>
+        </Box>
 
-        {/* O contêiner Flexbox principal */}
+        {/* ALTERADO: de Flexbox para CSS Grid */}
         <Box
           sx={{
-            display: "flex",
-            gap: 2, // Espaçamento entre os campos
-            // Em telas pequenas (xs), os campos ficam em coluna
-            // Em telas médias (md) ou maiores, ficam em linha
-            flexDirection: { xs: "column", md: "row" },
+            display: "grid",
+            gap: 2,
+            gridTemplateColumns: "1fr", // 1 coluna (mobile)
+            [theme.breakpoints.up("md")]: {
+              gridTemplateColumns: "repeat(3, 1fr)", // 3 colunas (desktop)
+            },
           }}
         >
-          {/* Coluna 1: Cliente - Ocupa 1/3 do espaço */}
-          <Box sx={{ flex: 1 }}>
-            {" "}
-            {/* flex: 1 faz ele ocupar o espaço disponível */}
-            <FormControl fullWidth required>
-              <InputLabel id="cliente-select-label">Cliente</InputLabel>
-              <Select
-                labelId="cliente-select-label"
-                value={clienteId}
-                label="Cliente"
-                onChange={handleClienteChange}
-              >
-                {clientes.map((cliente) => (
-                  <MenuItem key={cliente.id} value={cliente.id}>
-                    {cliente.nome}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
+          {/* Coluna 1: Cliente (sem o <Box> wrapper) */}
+          <FormControl fullWidth required>
+            <InputLabel id="cliente-select-label">Cliente</InputLabel>
+            <Select
+              labelId="cliente-select-label"
+              value={clienteId}
+              label="Cliente"
+              onChange={handleClienteChange}
+            >
+              {clientes.map((cliente) => (
+                <MenuItem key={cliente.id} value={cliente.id}>
+                  {cliente.nome}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-          {/* Coluna 2: Data/Hora - Ocupa 1/3 do espaço */}
-          <Box sx={{ flex: 1 }}>
-            {" "}
-            {/* flex: 1 faz ele ocupar o espaço disponível */}
-            <DateTimePicker
-              label="Data e Hora do Agendamento"
-              value={dataAgendamento}
-              onChange={(newValue) => setDataAgendamento(newValue)}
-              renderInput={(params) => <TextField {...params} fullWidth />}
-              // ADICIONE ESTA LINHA: Força o componente a usar 100% da largura do Box pai
-              sx={{ width: "100%" }}
-            />
-          </Box>
+          {/* Coluna 2: Data/Hora (sem o <Box> wrapper) */}
+          <DateTimePicker
+            label="Data e Hora do Agendamento"
+            value={dataAgendamento}
+            onChange={(newValue) => setDataAgendamento(newValue)}
+            // O renderInput agora é 'slots' e 'slotProps' em MUI v6+
+            // Mas mantendo o seu (v5), só precisamos garantir que o textfield é fullWidth
+            renderInput={(params) => <TextField {...params} fullWidth />}
+          />
 
-          {/* Coluna 3: Endereço - Ocupa 1/3 do espaço */}
-          <Box sx={{ flex: 1 }}>
-            {" "}
-            {/* flex: 1 faz ele ocupar o espaço disponível */}
-            <TextField
-              label="Endereço de Realização do Serviço"
-              value={enderecoServico}
-              onChange={(e) => setEnderecoServico(e.target.value)}
-              fullWidth
-              required
-            />
-          </Box>
+          {/* Coluna 3: Endereço (sem o <Box> wrapper) */}
+          <TextField
+            label="Endereço de Realização do Serviço"
+            value={enderecoServico}
+            onChange={(e) => setEnderecoServico(e.target.value)}
+            fullWidth
+            required
+          />
         </Box>
       </Paper>
-
       {/* --- SEÇÃO DE SERVIÇOS --- */}
       <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Serviços a Realizar
-        </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+          <DesignServicesIcon />
+          <Typography variant="h6">Serviços a Realizar</Typography>
+        </Box>
         <FormControl fullWidth>
           <InputLabel id="servicos-select-label">Serviços</InputLabel>
           <Select
@@ -281,15 +333,28 @@ function OrdemDeServicoCreatePage({ onLogout }) {
           </Select>
         </FormControl>
       </Paper>
-
-      {/* --- SEÇÃO DE MATERIAIS --- */}
+      {/* --- SEÇÃO DE MATERIAIS (CSS GRID) --- */}
       <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Materiais a Utilizar
-        </Typography>
-        {/* Inputs para adicionar material */}
-        <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
-          <FormControl fullWidth sx={{ flex: 3 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+          <Inventory2Icon />
+          <Typography variant="h6">Materiais a Utilizar</Typography>
+        </Box>
+
+        {/* ALTERADO: Inputs para adicionar material (CSS Grid) */}
+        <Box
+          sx={{
+            display: "grid",
+            gap: 2,
+            mb: 2,
+            gridTemplateColumns: "1fr auto", // 2 colunas (mobile)
+            [theme.breakpoints.up("sm")]: {
+              gridTemplateColumns: "3fr 1fr 1fr", // 3 colunas (desktop)
+            },
+            alignItems: "start", // Alinha os itens no topo
+          }}
+        >
+          {/* Ocupa a primeira coluna */}
+          <FormControl fullWidth>
             <InputLabel id="material-select-label">Material</InputLabel>
             <Select
               labelId="material-select-label"
@@ -308,24 +373,37 @@ function OrdemDeServicoCreatePage({ onLogout }) {
               ))}
             </Select>
           </FormControl>
+
+          {/* Ocupa a segunda coluna (mobile) e segunda (desktop) */}
           <TextField
             label="Qtde."
             type="number"
             value={quantidadeMaterial}
             onChange={(e) => setQuantidadeMaterial(e.target.value)}
-            sx={{ flex: 1 }}
             inputProps={{ min: 1 }}
+            // No mobile, o botão "Adicionar" quebra a linha
+            sx={{ [theme.breakpoints.down("sm")]: { gridColumn: "1 / 2" } }}
           />
+
+          {/* Ocupa a segunda coluna (mobile) e terceira (desktop) */}
           <Button
             variant="contained"
             onClick={handleAdicionarMaterial}
-            sx={{ flex: 1 }}
+            startIcon={<AddIcon />}
+            // No mobile, o botão fica ao lado da Qtde.
+            sx={{
+              height: "56px", // Altura padrão do TextField
+              [theme.breakpoints.down("sm")]: {
+                gridColumn: "2 / 3",
+                justifySelf: "start",
+              },
+            }}
           >
             Adicionar
           </Button>
         </Box>
 
-        {/* Tabela de materiais no carrinho */}
+        {/* Tabela de materiais no carrinho (com Estado Vazio) */}
         <TableContainer>
           <Table size="small">
             <TableHead>
@@ -337,37 +415,85 @@ function OrdemDeServicoCreatePage({ onLogout }) {
               </TableRow>
             </TableHead>
             <TableBody>
-              {materiaisNoCarrinho.map((item) => (
-                <TableRow key={item.material_id}>
-                  <TableCell>{item.nome}</TableCell>
-                  <TableCell>{item.quantidade}</TableCell>
-                  <TableCell>{item.unidade_medida}</TableCell>
-                  <TableCell align="right">
-                    <IconButton
-                      onClick={() => handleRemoverMaterial(item.material_id)}
-                      color="error"
-                      size="small"
+              {/* NOVO: Estado Vazio */}
+              {materiaisNoCarrinho.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} align="center">
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ p: 2 }}
                     >
-                      <DeleteIcon />
-                    </IconButton>
+                      Nenhum material adicionado.
+                    </Typography>
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                materiaisNoCarrinho.map((item) => (
+                  <TableRow key={item.material_id}>
+                    <TableCell>{item.nome}</TableCell>
+                    <TableCell>{item.quantidade}</TableCell>
+                    <TableCell>{item.unidade_medida}</TableCell>
+                    <TableCell align="right">
+                      <IconButton
+                        onClick={() => handleRemoverMaterial(item.material_id)}
+                        color="error"
+                        size="small"
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </TableContainer>
       </Paper>
-
       {/* --- BOTÃO DE SALVAR --- */}
-      <Button
-        type="submit"
-        variant="contained"
-        color="primary"
-        size="large"
-        fullWidth
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "flex-end", // Alinha à direita
+          gap: 2, // Espaço entre os botões
+          mt: 3, // Margem acima dos botões
+        }}
       >
-        Criar Ordem de Serviço
-      </Button>
+        <Button
+          type="button" // Importante: para não submeter o formulário
+          variant="outlined"
+          color="inherit" // Cor neutra
+          size="large"
+          onClick={() => navigate("/ordens")} // Ação de cancelar
+        >
+          Cancelar
+        </Button>
+
+        <Button
+          type="submit"
+          variant="contained"
+          color="primary"
+          size="large"
+          startIcon={<SaveIcon />}
+        >
+          Criar Ordem de Serviço
+        </Button>
+      </Box>
+      {/* NOVO: Componente Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

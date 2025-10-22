@@ -1,23 +1,32 @@
 // src/components/AddPagamentoForm.jsx
 
-import { useState } from 'react';
-import axios from 'axios';
+import { useState } from "react";
+import axios from "axios";
 
 // 1. Importando os componentes do MUI
-import { Box, Grid, TextField, Select, MenuItem, InputLabel, FormControl, Button } from '@mui/material';
+import {
+  Box,
+  Grid,
+  TextField,
+  Select,
+  MenuItem,
+  InputLabel,
+  FormControl,
+  Button,
+} from "@mui/material";
 
 function AddPagamentoForm({ ordemId, onSuccess }) {
-  const [valorPago, setValorPago] = useState('');
-  const [formaPagamento, setFormaPagamento] = useState('PIX');
+  const [valorPago, setValorPago] = useState("");
+  const [formaPagamento, setFormaPagamento] = useState("PIX");
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!valorPago) {
-      alert('Por favor, insira um valor.');
+      alert("Por favor, insira um valor.");
       return;
     }
 
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem("accessToken");
     const config = { headers: { Authorization: `Bearer ${token}` } };
     const data = {
       ordem_de_servico: ordemId,
@@ -26,13 +35,13 @@ function AddPagamentoForm({ ordemId, onSuccess }) {
     };
 
     try {
-      await axios.post('http://127.0.0.1:8000/api/pagamentos/', data, config);
-      alert('Pagamento registrado com sucesso!');
-      setValorPago('');
+      await axios.post("http://127.0.0.1:8000/api/pagamentos/", data, config);
+      alert("Pagamento registrado com sucesso!");
+      setValorPago("");
       onSuccess();
     } catch (error) {
       console.error("Erro ao registrar pagamento:", error);
-      alert('Erro ao registrar pagamento.');
+      alert("Erro ao registrar pagamento.");
     }
   };
 
@@ -40,7 +49,7 @@ function AddPagamentoForm({ ordemId, onSuccess }) {
     // 2. O novo return usando Grid
     <Box component="form" onSubmit={handleSubmit}>
       <Grid container spacing={2} alignItems="center">
-        <Grid item xs={12} sm={5}>
+        <Grid xs={12} sm={5}>
           <TextField
             label="Valor Pago"
             type="number"
@@ -53,7 +62,7 @@ function AddPagamentoForm({ ordemId, onSuccess }) {
             InputProps={{ inputProps: { min: 0.01 } }}
           />
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid xs={12} sm={4}>
           <FormControl fullWidth size="small">
             <InputLabel id="pagamento-select-label">Forma</InputLabel>
             <Select
@@ -71,8 +80,10 @@ function AddPagamentoForm({ ordemId, onSuccess }) {
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} sm={3}>
-          <Button type="submit" variant="contained" fullWidth>Registrar</Button>
+        <Grid xs={12} sm={3}>
+          <Button type="submit" variant="contained" fullWidth>
+            Registrar
+          </Button>
         </Grid>
       </Grid>
     </Box>
