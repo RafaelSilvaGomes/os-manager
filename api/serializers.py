@@ -70,14 +70,6 @@ class MaterialUtilizadoWriteSerializer(serializers.Serializer):
     material_id = serializers.IntegerField()
     quantidade = serializers.IntegerField()
     
-class AddServicoSerializer(serializers.Serializer):
-    servico_id = serializers.IntegerField()
-
-    def validate_servico_id(self, value):
-        if not Servico.objects.filter(pk=value).exists():
-            raise serializers.ValidationError("Serviço com este ID não existe.")
-        return value
-    
 class PagamentoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pagamento

@@ -110,11 +110,11 @@ function App() {
   const [token, setToken] = useState(null);
 
   const [themeMode, setThemeMode] = useState(
-    () => sessionStorage.getItem("themeMode") || "light"
+    () => localStorage.getItem("themeMode") || "light"
   );
   const firstProfessionKey = Object.keys(professionPalettes)[0];
   const [profession, setProfession] = useState(
-    () => sessionStorage.getItem("profession") || firstProfessionKey
+    () => localStorage.getItem("profession") || firstProfessionKey
   );
 
   const [anchorEl, setAnchorEl] = useState(null);
@@ -174,12 +174,12 @@ function App() {
   const toggleThemeMode = () => {
     const newMode = themeMode === "light" ? "dark" : "light";
     setThemeMode(newMode);
-    sessionStorage.setItem("themeMode", newMode);
+    localStorage.setItem("themeMode", newMode);
   };
 
   const handleProfessionChange = (newProfession) => {
     setProfession(newProfession);
-    sessionStorage.setItem("profession", newProfession);
+    localStorage.setItem("profession", newProfession);
     handleCloseProfessionDialog();
   };
 
