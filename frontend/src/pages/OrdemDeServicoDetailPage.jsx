@@ -1,7 +1,7 @@
-// src/pages/OrdemDeServicoDetailPage.jsx (VERSÃO MODERNA)
+// src/pages/OrdemDeServicoDetailPage.jsx (VERSÃO MODERNA - CORRIGIDA COM PROP TOKEN)
 
-import { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom"; // Adicionado useNavigate
+import { useState, useEffect, useCallback } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 import {
@@ -16,12 +16,12 @@ import {
   ListItem,
   ListItemText,
   IconButton,
-  CircularProgress, // NOVO
-  Snackbar, // NOVO
-  Alert, // NOVO
-  Button, // NOVO
-  useTheme, // NOVO
-  Paper, // NOVO
+  CircularProgress,
+  Snackbar,
+  Alert,
+  Button,
+  useTheme,
+  Paper,
 } from "@mui/material";
 // ÍCONES
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -34,18 +34,19 @@ import PaymentIcon from "@mui/icons-material/Payment";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import InfoIcon from "@mui/icons-material/Info";
 
+// Componentes filhos
 import AddMaterialForm from "../components/AddMaterialForm";
 import AddPagamentoForm from "../components/AddPagamentoForm";
 
-// Vamos assumir que onLogout é passado para consistência
-function OrdemDeServicoDetailPage({ onLogout }) {
+// 1. Aceita 'token' e 'onLogout' como props
+function OrdemDeServicoDetailPage({ token, onLogout }) {
   const { id } = useParams();
-  const navigate = useNavigate(); // NOVO
-  const theme = useTheme(); // NOVO
+  const navigate = useNavigate();
+  const theme = useTheme();
   const [ordem, setOrdem] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // NOVO: Estado do Snackbar
+  // Estado do Snackbar (sem mudanças)
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -54,9 +55,15 @@ function OrdemDeServicoDetailPage({ onLogout }) {
 
   // --- FUNÇÕES DE LÓGICA ---
 
-  const fetchOrdemDetalhes = async () => {
+  // useEffect agora depende da prop 'token'
+  const fetchOrdemDetalhes = useCallback(async () => {
+    if (!token) {
+      setLoading(false);
+      setOrdem(null);
+      return;
+    }
+    setLoading(true);
     try {
-      const token = localStorage.getItem("accessToken");
       const config = { headers: { Authorization: `Bearer ${token}` } };
       const response = await axios.get(
         `http://127.0.0.1:8000/api/ordens/${id}/`,
@@ -66,24 +73,27 @@ function OrdemDeServicoDetailPage({ onLogout }) {
     } catch (error) {
       console.error(`Erro ao buscar detalhes da OS #${id}:`, error);
       if (error.response && error.response.status === 401) {
+        if (onLogout) onLogout();
+      } else {
         setSnackbar({
           open: true,
-          message: "Sua sessão expirou.",
+          message: "Erro ao buscar detalhes da Ordem de Serviço.",
           severity: "error",
         });
-        if (onLogout) onLogout();
       }
     } finally {
       setLoading(false);
     }
-  };
+    // 2. Adicione 'id', 'token' e 'onLogout' como dependências do useCallback
+  }, [id, token, onLogout]);
 
+  // 3. O useEffect agora apenas chama a função
   useEffect(() => {
-    setLoading(true);
     fetchOrdemDetalhes();
-  }, [id, onLogout]); // Adicionado onLogout
+    // 4. A dependência do useEffect agora é a própria função
+  }, [fetchOrdemDetalhes]);
 
-  // Funções de Status (copiadas da página de listagem)
+  // Funções de Status (sem mudanças)
   const getStatusColor = (status) => {
     switch (status) {
       case "AB":
@@ -118,7 +128,7 @@ function OrdemDeServicoDetailPage({ onLogout }) {
     }
   };
 
-  // NOVO: Handler do Snackbar
+  // Handler do Snackbar (sem mudanças)
   const handleCloseSnackbar = (event, reason) => {
     if (reason === "clickaway") {
       return;
@@ -126,67 +136,90 @@ function OrdemDeServicoDetailPage({ onLogout }) {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  // TODO: Substituir window.confirm por um Dialog/Modal de confirmação
-
   const handleDeleteMaterialUtilizado = async (itemId) => {
+    // 5. Verifica a prop 'token'
+    if (!token) {
+      setSnackbar({
+        open: true,
+        message: "Erro de autenticação.",
+        severity: "error",
+      });
+      return;
+    }
+    // TODO: Substituir window.confirm
     if (window.confirm("Tem certeza que deseja remover este material?")) {
       try {
-        const token = localStorage.getItem("accessToken");
+        // 6. Usa a prop 'token' na configuração
         const config = { headers: { Authorization: `Bearer ${token}` } };
         await axios.delete(
           `http://127.0.0.1:8000/api/materiais-utilizados/${itemId}/`,
           config
         );
-        // ALTERADO: Substituído alert()
         setSnackbar({
           open: true,
           message: "Material removido com sucesso!",
           severity: "success",
         });
-        fetchOrdemDetalhes();
+        // Chama fetchOrdemDetalhes para atualizar a lista e totais
+        fetchOrdemDetalhes(); // Rebusca os dados completos da OS
       } catch (error) {
         console.error("Erro ao remover material:", error);
-        // ALTERADO: Substituído alert()
         setSnackbar({
           open: true,
           message: "Erro ao remover material.",
           severity: "error",
         });
+        // 7. Adiciona tratamento de 401
+        if (error.response && error.response.status === 401) {
+          if (onLogout) onLogout();
+        }
       }
     }
   };
 
   const handleDeletePagamento = async (pagamentoId) => {
+    // 8. Verifica a prop 'token'
+    if (!token) {
+      setSnackbar({
+        open: true,
+        message: "Erro de autenticação.",
+        severity: "error",
+      });
+      return;
+    }
+    // TODO: Substituir window.confirm
     if (window.confirm("Tem certeza que deseja remover este pagamento?")) {
       try {
-        const token = localStorage.getItem("accessToken");
+        // 9. Usa a prop 'token' na configuração
         const config = { headers: { Authorization: `Bearer ${token}` } };
         await axios.delete(
           `http://127.0.0.1:8000/api/pagamentos/${pagamentoId}/`,
           config
         );
-        // ALTERADO: Substituído alert()
         setSnackbar({
           open: true,
           message: "Pagamento removido com sucesso!",
           severity: "success",
         });
-        fetchOrdemDetalhes();
+        // Chama fetchOrdemDetalhes para atualizar a lista e totais
+        fetchOrdemDetalhes(); // Rebusca os dados completos da OS
       } catch (error) {
         console.error("Erro ao remover pagamento:", error);
-        // ALTERADO: Substituído alert()
         setSnackbar({
           open: true,
           message: "Erro ao remover pagamento.",
           severity: "error",
         });
+        // 10. Adiciona tratamento de 401
+        if (error.response && error.response.status === 401) {
+          if (onLogout) onLogout();
+        }
       }
     }
   };
 
   // --- RENDERIZAÇÃO ---
 
-  // ALTERADO: Estado de loading
   if (loading) {
     return (
       <Box
@@ -201,28 +234,35 @@ function OrdemDeServicoDetailPage({ onLogout }) {
       </Box>
     );
   }
-  // ALTERADO: Estado vazio
   if (!ordem) {
     return (
       <Paper
         sx={{
           p: 3,
+          m: 3, // Margem para não colar nas bordas
           display: "flex",
+          flexDirection: "column", // Empilha os itens
           alignItems: "center",
           justifyContent: "center",
           gap: 1,
-          m: 3,
         }}
       >
-        <InfoIcon color="error" />
-        <Typography>
-          Ordem de Serviço não encontrada ou foi deletada.
+        <InfoIcon color="error" sx={{ fontSize: 40 }} />
+        <Typography variant="h6" color="text.secondary">
+          Ordem de Serviço não encontrada.
         </Typography>
+        <Typography color="text.secondary">
+          Ela pode ter sido deletada ou o ID está incorreto.
+        </Typography>
+        <Button component={Link} to="/ordens" sx={{ mt: 2 }}>
+          Voltar para Lista
+        </Button>
       </Paper>
     );
   }
 
   return (
+    // Seu JSX existente continua aqui...
     <Container maxWidth="lg" sx={{ my: 4 }}>
       <Box
         sx={{
@@ -233,9 +273,12 @@ function OrdemDeServicoDetailPage({ onLogout }) {
           gap: 2,
         }}
       >
-        {/* NOVO: Botão Voltar + Título com Ícone */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-          <IconButton component={Link} to="/ordens">
+          <IconButton
+            component={Link}
+            to="/ordens"
+            aria-label="Voltar para lista de ordens"
+          >
             <ArrowBackIcon />
           </IconButton>
           <ReceiptLongIcon fontSize="large" />
@@ -243,7 +286,6 @@ function OrdemDeServicoDetailPage({ onLogout }) {
             OS #{ordem.id} - {ordem.cliente.nome}
           </Typography>
         </Box>
-        {/* ALTERADO: Chip com label traduzido */}
         <Chip
           label={getStatusLabel(ordem.status)}
           color={getStatusColor(ordem.status)}
@@ -251,15 +293,13 @@ function OrdemDeServicoDetailPage({ onLogout }) {
         />
       </Box>
 
-      {/* Card de Informações Gerais (COM CSS GRID) */}
+      {/* Card Info Gerais */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
             <AccountCircleIcon />
             <Typography variant="h6">Informações Gerais</Typography>
           </Box>
-
-          {/* ALTERADO: Substituído <Grid> por <Box display: 'grid'> */}
           <Box
             sx={{
               display: "grid",
@@ -268,8 +308,6 @@ function OrdemDeServicoDetailPage({ onLogout }) {
             }}
           >
             <Box>
-              {" "}
-              {/* Coluna 1 */}
               <Typography>
                 <strong>Cliente:</strong> {ordem.cliente.nome}
               </Typography>
@@ -278,8 +316,6 @@ function OrdemDeServicoDetailPage({ onLogout }) {
               </Typography>
             </Box>
             <Box>
-              {" "}
-              {/* Coluna 2 */}
               <Typography>
                 <strong>Endereço do Serviço:</strong>{" "}
                 {ordem.endereco_servico || "N/A"}
@@ -295,10 +331,7 @@ function OrdemDeServicoDetailPage({ onLogout }) {
               </Typography>
             </Box>
           </Box>
-
           <Divider sx={{ my: 2 }} />
-
-          {/* Valor Total */}
           <Box>
             <Typography variant="h5" sx={{ fontWeight: "bold" }}>
               Valor Total: R$ {ordem.valor_total}
@@ -325,8 +358,7 @@ function OrdemDeServicoDetailPage({ onLogout }) {
         </CardContent>
       </Card>
 
-      {/* Grid de Serviços, Materiais e Pagamentos (COM CSS GRID) */}
-      {/* ALTERADO: Substituído <Grid container> por <Box display: 'grid'> */}
+      {/* Grid Serviços / Materiais */}
       <Box
         sx={{
           display: "grid",
@@ -335,7 +367,6 @@ function OrdemDeServicoDetailPage({ onLogout }) {
           gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
         }}
       >
-        {/* Coluna 1: Serviços */}
         <Card>
           <CardContent>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
@@ -359,7 +390,6 @@ function OrdemDeServicoDetailPage({ onLogout }) {
           </CardContent>
         </Card>
 
-        {/* Coluna 2: Materiais */}
         <Card>
           <CardContent>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
@@ -378,6 +408,7 @@ function OrdemDeServicoDetailPage({ onLogout }) {
                         edge="end"
                         aria-label="delete"
                         onClick={() => handleDeleteMaterialUtilizado(m.id)}
+                        color="error" // Adiciona cor ao botão
                       >
                         <DeleteIcon />
                       </IconButton>
@@ -397,7 +428,7 @@ function OrdemDeServicoDetailPage({ onLogout }) {
         </Card>
       </Box>
 
-      {/* Card de Pagamentos (ocupa a linha inteira) */}
+      {/* Card Pagamentos */}
       <Card sx={{ mb: 4 }}>
         <CardContent>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
@@ -415,13 +446,14 @@ function OrdemDeServicoDetailPage({ onLogout }) {
                       edge="end"
                       aria-label="delete"
                       onClick={() => handleDeletePagamento(p.id)}
+                      color="error" // Adiciona cor ao botão
                     >
                       <DeleteIcon />
                     </IconButton>
                   }
                 >
                   <ListItemText
-                    primary={`R$ ${p.valor_pago} (${p.forma_pagamento_display})`} // Use o _display
+                    primary={`R$ ${p.valor_pago} (${p.forma_pagamento_display})`}
                     secondary={`em ${new Date(
                       p.data_pagamento
                     ).toLocaleDateString("pt-BR")}`}
@@ -437,13 +469,11 @@ function OrdemDeServicoDetailPage({ onLogout }) {
         </CardContent>
       </Card>
 
-      {/* Divider de Ações */}
       <Divider sx={{ my: 4 }}>
         <Chip icon={<AddCircleOutlineIcon />} label="Adicionar Itens à OS" />
       </Divider>
 
-      {/* Grid de Ações (Formulários) (COM CSS GRID) */}
-      {/* ALTERADO: Substituído <Grid container> por <Box display: 'grid'> */}
+      {/* Grid Formulários de Ação */}
       <Box
         sx={{
           display: "grid",
@@ -455,17 +485,29 @@ function OrdemDeServicoDetailPage({ onLogout }) {
           <Typography variant="h6" gutterBottom>
             Adicionar Material
           </Typography>
-          <AddMaterialForm ordemId={id} onSuccess={fetchOrdemDetalhes} />
+          {/* Passando a prop token para os forms filhos */}
+          <AddMaterialForm
+            token={token}
+            ordemId={id}
+            onSuccess={fetchOrdemDetalhes}
+            onLogout={onLogout}
+            setSnackbar={setSnackbar} // <-- ADICIONE ESTA LINHA
+          />
         </Paper>
         <Paper elevation={3} sx={{ p: 3 }}>
           <Typography variant="h6" gutterBottom>
             Registrar Pagamento
           </Typography>
-          <AddPagamentoForm ordemId={id} onSuccess={fetchOrdemDetalhes} />
+          {/* Passando a prop token para os forms filhos */}
+          <AddPagamentoForm
+            token={token}
+            ordemId={id}
+            onSuccess={fetchOrdemDetalhes}
+            onLogout={onLogout}
+          />
         </Paper>
       </Box>
 
-      {/* NOVO: Componente Snackbar */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}

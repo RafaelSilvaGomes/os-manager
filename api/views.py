@@ -33,6 +33,7 @@ class ServicoViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(profissional=self.request.user)
+        
 class OrdemDeServicoViewSet(viewsets.ModelViewSet):
 
     serializer_class = OrdemDeServicoSerializer

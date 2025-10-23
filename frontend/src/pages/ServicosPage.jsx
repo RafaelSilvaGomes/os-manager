@@ -1,4 +1,4 @@
-// src/pages/ServicosPage.jsx (VERSÃO MODERNA COM CSS GRID)
+// src/pages/ServicosPage.jsx (VERSÃO MODERNA - CORRIGIDA COM PROP TOKEN)
 
 import { useState, useEffect } from "react";
 import axios from "axios";
@@ -11,20 +11,20 @@ import {
   CardContent,
   Collapse,
   Paper,
-  CircularProgress, // NOVO
-  Snackbar, // NOVO
-  Alert, // NOVO
-  useTheme, // NOVO
-  IconButton, // NOVO
+  CircularProgress,
+  Snackbar,
+  Alert,
+  useTheme,
+  IconButton,
 } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add"; // NOVO
-import DesignServicesIcon from "@mui/icons-material/DesignServices"; // NOVO
-import EditIcon from "@mui/icons-material/Edit"; // NOVO
-import DeleteIcon from "@mui/icons-material/Delete"; // NOVO
-import InfoIcon from "@mui/icons-material/Info"; // NOVO
+import AddIcon from "@mui/icons-material/Add";
+import DesignServicesIcon from "@mui/icons-material/DesignServices";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import InfoIcon from "@mui/icons-material/Info";
 
-function ServicosPage({ onLogout }) {
-  // Adicionando onLogout
+// 1. Aceita 'token' e 'onLogout' como props
+function ServicosPage({ token, onLogout }) {
   const [servicos, setServicos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [nome, setNome] = useState("");
@@ -32,80 +32,109 @@ function ServicosPage({ onLogout }) {
   const [preco, setPreco] = useState("");
   const [editingServico, setEditingServico] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const theme = useTheme(); // NOVO
+  const theme = useTheme();
 
-  // NOVO: Estado do Snackbar
+  // Estado do Snackbar (sem mudanças)
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
 
-  const fetchServicos = async () => {
-    try {
-      const token = localStorage.getItem("accessToken");
+  // useEffect agora depende da prop 'token'
+  useEffect(() => {
+    const fetchServicos = async () => {
+      // 2. Verifica a prop 'token'
       if (!token) {
         setLoading(false);
+        setServicos([]); // Limpa serviços se não houver token
         return;
       }
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      const response = await axios.get(
-        "http://127.0.0.1:8000/api/servicos/",
-        config
-      );
-      setServicos(response.data);
-    } catch (error) {
-      console.error("Erro ao buscar serviços:", error);
-      if (error.response && error.response.status === 401) {
-        setSnackbar({
-          open: true,
-          message: "Sua sessão expirou.",
-          severity: "error",
-        });
-        if (onLogout) onLogout();
+      setLoading(true);
+      try {
+        // 3. Usa a prop 'token' na configuração
+        const config = { headers: { Authorization: `Bearer ${token}` } };
+        const response = await axios.get(
+          "http://127.0.0.1:8000/api/servicos/",
+          config
+        );
+        setServicos(response.data);
+      } catch (error) {
+        console.error("Erro ao buscar serviços:", error);
+        if (error.response && error.response.status === 401) {
+          // Só chama logout se a prop existir
+          if (onLogout) onLogout();
+        } else {
+          setSnackbar({
+            open: true,
+            message: "Erro ao buscar dados.",
+            severity: "error",
+          });
+        }
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  useEffect(() => {
     fetchServicos();
-  }, [onLogout]); // Adicionado
+    // 4. Adiciona 'token' às dependências
+  }, [token, onLogout]);
 
-  // ALTERADO: Lógica de Create/Update unificada
   const handleSubmit = async (event) => {
     event.preventDefault();
+    // 5. Verifica a prop 'token'
+    if (!token) {
+      setSnackbar({
+        open: true,
+        message: "Erro de autenticação. Tente logar novamente.",
+        severity: "error",
+      });
+      return;
+    }
     const servicoData = { nome, descricao, preco };
 
     try {
-      const token = localStorage.getItem("accessToken");
+      // 6. Usa a prop 'token' na configuração
       const config = { headers: { Authorization: `Bearer ${token}` } };
 
+      let updatedService = null; // Para atualizar estado local
+
       if (editingServico) {
-        await axios.put(
+        const response = await axios.put(
           `http://127.0.0.1:8000/api/servicos/${editingServico.id}/`,
           servicoData,
           config
         );
+        updatedService = response.data;
         setSnackbar({
           open: true,
           message: "Serviço atualizado com sucesso!",
           severity: "success",
         });
       } else {
-        await axios.post(
+        const response = await axios.post(
           "http://127.0.0.1:8000/api/servicos/",
           servicoData,
           config
         );
+        updatedService = response.data;
         setSnackbar({
           open: true,
           message: "Serviço cadastrado com sucesso!",
           severity: "success",
         });
       }
-      fetchServicos();
+
+      // Atualiza estado local para feedback imediato
+      if (editingServico) {
+        setServicos(
+          servicos.map((s) => (s.id === updatedService.id ? updatedService : s))
+        );
+      } else {
+        setServicos([...servicos, updatedService]);
+      }
+
+      // fetchServicos(); // Não é mais estritamente necessário
       setIsFormOpen(false);
       clearForm();
     } catch (error) {
@@ -115,22 +144,33 @@ function ServicosPage({ onLogout }) {
         message: "Erro ao salvar serviço.",
         severity: "error",
       });
+      // 7. Adiciona tratamento de 401
+      if (error.response && error.response.status === 401) {
+        if (onLogout) onLogout();
+      }
     }
   };
 
-  // REMOVIDO: handleCreateServico e handleUpdateServico (unificados acima)
-
   const handleDeleteServico = async (servicoId) => {
+    // 8. Verifica a prop 'token'
+    if (!token) {
+      setSnackbar({
+        open: true,
+        message: "Erro de autenticação.",
+        severity: "error",
+      });
+      return;
+    }
+    // TODO: Substituir window.confirm
     if (window.confirm("Tem certeza que deseja deletar este serviço?")) {
       try {
-        const token = localStorage.getItem("accessToken");
+        // 9. Usa a prop 'token' na configuração
         const config = { headers: { Authorization: `Bearer ${token}` } };
         await axios.delete(
           `http://127.0.0.1:8000/api/servicos/${servicoId}/`,
           config
         );
         setServicos(servicos.filter((servico) => servico.id !== servicoId));
-        // ALTERADO: Substituído alert()
         setSnackbar({
           open: true,
           message: "Serviço deletado com sucesso!",
@@ -138,16 +178,20 @@ function ServicosPage({ onLogout }) {
         });
       } catch (error) {
         console.error("Erro ao deletar serviço:", error);
-        // ALTERADO: Substituído alert()
         setSnackbar({
           open: true,
           message: "Erro ao deletar serviço.",
           severity: "error",
         });
+        // 10. Adiciona tratamento de 401
+        if (error.response && error.response.status === 401) {
+          if (onLogout) onLogout();
+        }
       }
     }
   };
 
+  // --- Funções handleEditClick, handleCancel, clearForm, handleCloseSnackbar (sem mudanças) ---
   const handleEditClick = (servico) => {
     setEditingServico(servico);
     setNome(servico.nome);
@@ -169,7 +213,6 @@ function ServicosPage({ onLogout }) {
     setEditingServico(null);
   };
 
-  // NOVO: Handler do Snackbar
   const handleCloseSnackbar = (event, reason) => {
     if (reason === "clickaway") {
       return;
@@ -177,8 +220,9 @@ function ServicosPage({ onLogout }) {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  // ALTERADO: Estado de loading
-  if (loading) {
+  // --- Renderização (ajuste no loading) ---
+  if (loading && servicos.length === 0) {
+    // Mostra loading só se não houver dados ainda
     return (
       <Box
         sx={{
@@ -194,8 +238,8 @@ function ServicosPage({ onLogout }) {
   }
 
   return (
+    // Seu JSX existente continua aqui...
     <Box>
-      {/* ALTERADO: Header com ícones */}
       <Box
         sx={{
           display: "flex",
@@ -222,14 +266,12 @@ function ServicosPage({ onLogout }) {
         </Button>
       </Box>
 
-      {/* Formulário */}
       <Collapse in={isFormOpen}>
         <Paper elevation={4} sx={{ p: 3, mb: 4, overflow: "hidden" }}>
           <Typography variant="h6" component="h3" gutterBottom>
             {editingServico ? "Editar Serviço" : "Cadastrar Novo Serviço"}
           </Typography>
 
-          {/* ALTERADO: Formulário com CSS GRID */}
           <Box
             component="form"
             onSubmit={handleSubmit}
@@ -262,11 +304,9 @@ function ServicosPage({ onLogout }) {
               onChange={(e) => setDescricao(e.target.value)}
               multiline
               rows={3}
-              // Ocupa 2 colunas no desktop
               sx={{ [theme.breakpoints.up("sm")]: { gridColumn: "1 / -1" } }}
             />
 
-            {/* Box dos botões, ocupa 2 colunas no desktop */}
             <Box
               sx={{
                 display: "flex",
@@ -286,7 +326,6 @@ function ServicosPage({ onLogout }) {
         </Paper>
       </Collapse>
 
-      {/* ALTERADO: Lista de Serviços com CSS GRID (layout compacto) */}
       <Box
         sx={{
           display: "grid",
@@ -306,11 +345,10 @@ function ServicosPage({ onLogout }) {
         {servicos.length > 0 ? (
           servicos.map((servico) => (
             <Card key={servico.id} elevation={3}>
-              {/* Usando o mesmo layout de card compacto do MateriaisPage */}
               <CardContent
                 sx={{
                   position: "relative",
-                  p: 1.5, // Padding compacto
+                  p: 1.5,
                   "&:last-child": {
                     pb: 1.5,
                   },
@@ -335,7 +373,7 @@ function ServicosPage({ onLogout }) {
                 <Typography
                   variant="h6"
                   sx={{
-                    pr: 9, // Espaço para botões
+                    pr: 9,
                     fontSize: "1.1rem",
                     whiteSpace: "nowrap",
                     overflow: "hidden",
@@ -372,7 +410,6 @@ function ServicosPage({ onLogout }) {
             </Card>
           ))
         ) : (
-          // ALTERADO: Estado Vazio melhorado
           <Paper
             sx={{
               p: 3,
@@ -380,7 +417,7 @@ function ServicosPage({ onLogout }) {
               alignItems: "center",
               justifyContent: "center",
               gap: 1,
-              gridColumn: "1 / -1", // Ocupa a grade inteira
+              gridColumn: "1 / -1",
             }}
           >
             <InfoIcon color="action" />
@@ -389,7 +426,6 @@ function ServicosPage({ onLogout }) {
         )}
       </Box>
 
-      {/* NOVO: Componente Snackbar */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}

@@ -1,4 +1,4 @@
-// src/pages/OrdensDeServicoPage.jsx (VERSÃO MODERNA)
+// src/pages/OrdensDeServicoPage.jsx (VERSÃO MODERNA - CORRIGIDA COM PROP TOKEN)
 
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
@@ -12,40 +12,43 @@ import {
   CardActionArea,
   Chip,
   CardActions,
-  CircularProgress, // NOVO
-  Snackbar, // NOVO
-  Alert, // NOVO
-  useTheme, // NOVO
-  Paper, // NOVO
-  IconButton, // NOVO
+  CircularProgress,
+  Snackbar,
+  Alert,
+  useTheme,
+  Paper,
+  IconButton,
 } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add"; // NOVO
-import ReceiptLongIcon from "@mui/icons-material/ReceiptLong"; // NOVO
-import DeleteIcon from "@mui/icons-material/Delete"; // NOVO
-import InfoIcon from "@mui/icons-material/Info"; // NOVO
+import AddIcon from "@mui/icons-material/Add";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import DeleteIcon from "@mui/icons-material/Delete";
+import InfoIcon from "@mui/icons-material/Info";
 
-function OrdensDeServicoPage({ onLogout }) {
-  // Adicionado onLogout
+// 1. Aceita 'token' e 'onLogout' como props
+function OrdensDeServicoPage({ token, onLogout }) {
   const [ordens, setOrdens] = useState([]);
   const [loading, setLoading] = useState(true);
-  const theme = useTheme(); // NOVO
+  const theme = useTheme();
 
-  // NOVO: Estado do Snackbar
+  // Estado do Snackbar (sem mudanças)
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
 
+  // useEffect agora depende da prop 'token'
   useEffect(() => {
     const fetchOrdens = async () => {
+      // 2. Verifica a prop 'token'
+      if (!token) {
+        setLoading(false);
+        setOrdens([]); // Limpa as ordens se não houver token
+        return;
+      }
       setLoading(true);
       try {
-        const token = localStorage.getItem("accessToken");
-        if (!token) {
-          setLoading(false);
-          return;
-        }
+        // 3. Usa a prop 'token' na configuração
         const config = { headers: { Authorization: `Bearer ${token}` } };
         const response = await axios.get(
           "http://127.0.0.1:8000/api/ordens/",
@@ -55,21 +58,24 @@ function OrdensDeServicoPage({ onLogout }) {
       } catch (error) {
         console.error("Erro ao buscar Ordens de Serviço:", error);
         if (error.response && error.response.status === 401) {
+          // Só chama logout se a prop existir
+          if (onLogout) onLogout();
+        } else {
           setSnackbar({
             open: true,
-            message: "Sua sessão expirou.",
+            message: "Erro ao buscar Ordens de Serviço.",
             severity: "error",
           });
-          if (onLogout) onLogout();
         }
       } finally {
         setLoading(false);
       }
     };
     fetchOrdens();
-  }, [onLogout]); // Adicionado
+    // 4. Adiciona 'token' às dependências
+  }, [token, onLogout]);
 
-  // Uma função para dar cor aos status
+  // Funções de Status (sem mudanças)
   const getStatusColor = (status) => {
     switch (status) {
       case "AB":
@@ -79,15 +85,13 @@ function OrdensDeServicoPage({ onLogout }) {
       case "FN":
         return "success";
       case "PG":
-        return "secondary"; // PG (Paga) pode ser 'secondary' ou 'success'
+        return "secondary";
       case "CA":
         return "error";
       default:
         return "default";
     }
   };
-
-  // NOVO: Função para traduzir os status
   const getStatusLabel = (status) => {
     switch (status) {
       case "AB":
@@ -105,7 +109,7 @@ function OrdensDeServicoPage({ onLogout }) {
     }
   };
 
-  // NOVO: Handler do Snackbar
+  // Handler do Snackbar (sem mudanças)
   const handleCloseSnackbar = (event, reason) => {
     if (reason === "clickaway") {
       return;
@@ -114,22 +118,29 @@ function OrdensDeServicoPage({ onLogout }) {
   };
 
   const handleDeleteOrdem = async (ordemId) => {
-    // Substituindo o window.confirm por um snackbar de confirmação (em uma v2)
-    // Por enquanto, mantemos o confirm, mas trocamos os alerts.
+    // 5. Verifica a prop 'token'
+    if (!token) {
+      setSnackbar({
+        open: true,
+        message: "Erro de autenticação.",
+        severity: "error",
+      });
+      return;
+    }
+    // TODO: Substituir window.confirm
     if (
       window.confirm(
         "Tem certeza que deseja deletar esta Ordem de Serviço? Esta ação não pode ser desfeita."
       )
     ) {
       try {
-        const token = localStorage.getItem("accessToken");
+        // 6. Usa a prop 'token' na configuração
         const config = { headers: { Authorization: `Bearer ${token}` } };
         await axios.delete(
           `http://127.0.0.1:8000/api/ordens/${ordemId}/`,
           config
         );
         setOrdens(ordens.filter((ordem) => ordem.id !== ordemId));
-        // ALTERADO: Substituído alert()
         setSnackbar({
           open: true,
           message: "Ordem de Serviço deletada com sucesso!",
@@ -137,18 +148,22 @@ function OrdensDeServicoPage({ onLogout }) {
         });
       } catch (error) {
         console.error("Erro ao deletar OS:", error);
-        // ALTERADO: Substituído alert()
         setSnackbar({
           open: true,
           message: "Erro ao deletar a Ordem de Serviço.",
           severity: "error",
         });
+        // 7. Adiciona tratamento de 401
+        if (error.response && error.response.status === 401) {
+          if (onLogout) onLogout();
+        }
       }
     }
   };
 
-  // ALTERADO: Estado de loading
-  if (loading) {
+  // --- Renderização (ajuste no loading) ---
+  if (loading && ordens.length === 0) {
+    // Mostra loading só se não houver dados ainda
     return (
       <Box
         sx={{
@@ -164,14 +179,14 @@ function OrdensDeServicoPage({ onLogout }) {
   }
 
   return (
+    // Seu JSX existente continua aqui...
     <Box>
-      {/* ALTERADO: Header com ícones */}
       <Box
         sx={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          mb: 3, // Aumentei a margem
+          mb: 3,
         }}
       >
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -190,71 +205,69 @@ function OrdensDeServicoPage({ onLogout }) {
         </Button>
       </Box>
 
-      {/* ALTERADO: Lista de OS com CSS GRID */}
       <Box
         sx={{
           display: "grid",
           gap: 2,
-          gridTemplateColumns: "repeat(1, 1fr)", // Mobile
+          gridTemplateColumns: "repeat(1, 1fr)",
           [theme.breakpoints.up("sm")]: {
-            gridTemplateColumns: "repeat(2, 1fr)", // Tablet
+            gridTemplateColumns: "repeat(2, 1fr)",
           },
           [theme.breakpoints.up("md")]: {
-            gridTemplateColumns: "repeat(3, 1fr)", // Desktop
+            gridTemplateColumns: "repeat(3, 1fr)",
           },
           [theme.breakpoints.up("lg")]: {
-            gridTemplateColumns: "repeat(4, 1fr)", // Desktop Grande
+            gridTemplateColumns: "repeat(4, 1fr)",
           },
         }}
       >
         {ordens.length > 0 ? (
           ordens.map((ordem) => (
-            <Card key={ordem.id} elevation={3}>
-              {/* CardActionArea faz o card inteiro ser clicável */}
-              <CardActionArea
-                component={Link}
-                to={`/ordens/${ordem.id}`}
-                sx={{
-                  height: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                }}
-              >
-                <CardContent sx={{ width: "100%", p: 2, pb: 1 }}>
-                  {" "}
-                  {/* Padding mais compacto */}
+            <Card
+              key={ordem.id}
+              elevation={3}
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+              }}
+            >
+              <CardActionArea component={Link} to={`/ordens/${ordem.id}`}>
+                <CardContent sx={{ width: "100%", p: 1.5 }}>
                   <Box
                     sx={{ display: "flex", justifyContent: "space-between" }}
                   >
                     <Typography variant="h6">OS #{ordem.id}</Typography>
                     <Chip
-                      // ALTERADO: Usando o label traduzido
                       label={getStatusLabel(ordem.status)}
                       color={getStatusColor(ordem.status)}
                       size="small"
                       sx={{ fontWeight: "bold" }}
                     />
                   </Box>
-                  <Typography color="text.secondary" noWrap>
-                    {" "}
-                    {/* noWrap corta nomes longos */}
+                  <Typography variant="body2" color="text.secondary" noWrap>
                     Cliente: {ordem.cliente.nome}
                   </Typography>
-                  <Typography variant="h6" sx={{ mt: 1 }}>
+                  <Typography
+                    variant="h6"
+                    color="primary"
+                    sx={{
+                      mt: 0.5,
+                      fontWeight: "bold",
+                      fontSize: "1.1rem",
+                    }}
+                  >
                     R$ {ordem.valor_total}
                   </Typography>
                 </CardContent>
-                {/* O CardActionArea ocupa todo o espaço, então CardActions fica fora dele */}
               </CardActionArea>
 
-              <CardActions sx={{ justifyContent: "flex-end", pt: 0 }}>
-                {/* O botão de deletar fica fora do link principal */}
+              <CardActions sx={{ justifyContent: "flex-end", p: 0.5, pt: 0 }}>
                 <Button
                   size="small"
                   color="error"
                   onClick={() => handleDeleteOrdem(ordem.id)}
-                  startIcon={<DeleteIcon />} // NOVO: Ícone
+                  startIcon={<DeleteIcon />}
                 >
                   Deletar
                 </Button>
@@ -262,7 +275,6 @@ function OrdensDeServicoPage({ onLogout }) {
             </Card>
           ))
         ) : (
-          // ALTERADO: Estado Vazio
           <Paper
             sx={{
               p: 3,
@@ -270,7 +282,7 @@ function OrdensDeServicoPage({ onLogout }) {
               alignItems: "center",
               justifyContent: "center",
               gap: 1,
-              gridColumn: "1 / -1", // Ocupa a grade inteira
+              gridColumn: "1 / -1",
             }}
           >
             <InfoIcon color="action" />
@@ -279,7 +291,6 @@ function OrdensDeServicoPage({ onLogout }) {
         )}
       </Box>
 
-      {/* NOVO: Componente Snackbar */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}

@@ -15,18 +15,17 @@ import {
   Button,
 } from "@mui/material";
 
-function AddPagamentoForm({ ordemId, onSuccess }) {
+function AddPagamentoForm({ token, ordemId, onSuccess, onLogout }) {
   const [valorPago, setValorPago] = useState("");
   const [formaPagamento, setFormaPagamento] = useState("PIX");
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!valorPago) {
+    if (!valorPago || !token) {
       alert("Por favor, insira um valor.");
       return;
     }
 
-    const token = localStorage.getItem("accessToken");
     const config = { headers: { Authorization: `Bearer ${token}` } };
     const data = {
       ordem_de_servico: ordemId,
@@ -41,7 +40,12 @@ function AddPagamentoForm({ ordemId, onSuccess }) {
       onSuccess();
     } catch (error) {
       console.error("Erro ao registrar pagamento:", error);
-      alert("Erro ao registrar pagamento.");
+
+      if (error.response && error.response.status === 401) {
+        if (onLogout) onLogout();
+      } else {
+        alert("Erro ao registrar pagamento.");
+      }
     }
   };
 

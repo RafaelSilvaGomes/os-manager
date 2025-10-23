@@ -52,14 +52,31 @@ class MaterialSerializer(serializers.ModelSerializer):
 
 class MaterialUtilizadoSerializer(serializers.ModelSerializer):
     material = MaterialSerializer(read_only=True)
-    
+    material_id = serializers.PrimaryKeyRelatedField(
+        queryset=Material.objects.all(), write_only=True, source='material'
+    )
+
     class Meta:
         model = MaterialUtilizado
-        fields = ["id", "material", "quantidade"]
+        fields = [
+            "id",
+            "ordem_de_servico",
+            "material",
+            "material_id",
+            "quantidade",
+        ]
 
 class MaterialUtilizadoWriteSerializer(serializers.Serializer):
     material_id = serializers.IntegerField()
     quantidade = serializers.IntegerField()
+    
+class AddServicoSerializer(serializers.Serializer):
+    servico_id = serializers.IntegerField()
+
+    def validate_servico_id(self, value):
+        if not Servico.objects.filter(pk=value).exists():
+            raise serializers.ValidationError("Serviço com este ID não existe.")
+        return value
     
 class PagamentoSerializer(serializers.ModelSerializer):
     class Meta:

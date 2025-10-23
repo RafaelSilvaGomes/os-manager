@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { BrowserRouter, Routes, Route, Navigate, Link } from "react-router-dom";
 import "./App.css";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 // --- Importações MUI ---
 import {
@@ -109,11 +110,11 @@ function App() {
   const [token, setToken] = useState(null);
 
   const [themeMode, setThemeMode] = useState(
-    () => localStorage.getItem("themeMode") || "light"
+    () => sessionStorage.getItem("themeMode") || "light"
   );
   const firstProfessionKey = Object.keys(professionPalettes)[0];
   const [profession, setProfession] = useState(
-    () => localStorage.getItem("profession") || firstProfessionKey
+    () => sessionStorage.getItem("profession") || firstProfessionKey
   );
 
   const [anchorEl, setAnchorEl] = useState(null);
@@ -121,8 +122,10 @@ function App() {
   const openMenu = Boolean(anchorEl);
 
   const theme = useMemo(() => {
+    const paletteKey = token ? profession : firstProfessionKey;
+
     const currentPalette =
-      professionPalettes[profession] || professionPalettes[firstProfessionKey];
+      professionPalettes[paletteKey] || professionPalettes[firstProfessionKey];
 
     return createTheme({
       palette: {
@@ -136,14 +139,27 @@ function App() {
           },
         }),
       },
+      typography: {
+        fontSize: 12,
+        fontFamily: [
+          '"Inter"',
+          '"Roboto"',
+          '"Helvetica"',
+          "Arial",
+          "sans-serif",
+        ].join(","),
+      },
     });
-  }, [themeMode, profession]);
+  }, [themeMode, profession, token]);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem("accessToken");
+    const storedToken = sessionStorage.getItem("accessToken");
     if (storedToken) {
       setToken(storedToken);
     }
+  }, []);
+
+  useEffect(() => {
     document.body.className = themeMode;
   }, [themeMode]);
 
@@ -158,23 +174,23 @@ function App() {
   const toggleThemeMode = () => {
     const newMode = themeMode === "light" ? "dark" : "light";
     setThemeMode(newMode);
-    localStorage.setItem("themeMode", newMode);
+    sessionStorage.setItem("themeMode", newMode);
   };
 
   const handleProfessionChange = (newProfession) => {
     setProfession(newProfession);
-    localStorage.setItem("profession", newProfession);
+    sessionStorage.setItem("profession", newProfession);
     handleCloseProfessionDialog();
   };
 
   const handleLogin = (accessToken) => {
     setToken(accessToken);
-    localStorage.setItem("accessToken", accessToken);
+    sessionStorage.setItem("accessToken", accessToken);
   };
 
   const handleLogout = () => {
     setToken(null);
-    localStorage.removeItem("accessToken");
+    sessionStorage.removeItem("accessToken");
   };
 
   return (
@@ -200,13 +216,9 @@ function App() {
                       mr: 2,
                       display: "flex",
                       alignItems: "center",
-                      gap: 1, // Controla o espaço entre o ícone e o texto
+                      gap: 1,
                     }}
                   >
-                    {/*
-                      Aqui, buscamos o ícone da profissão atual 
-                      no seu objeto 'professionPalettes'.
-                    */}
                     {
                       (
                         professionPalettes[profession] ||
@@ -214,7 +226,7 @@ function App() {
                       ).icon
                     }
                     {/* Seu novo texto */}
-                    OS Manager
+                    OrdemPro
                   </Typography>
 
                   <Box
@@ -448,60 +460,6 @@ function App() {
             >
               <Routes>
                 <Route
-                  path="/"
-                  element={
-                    token ? (
-                      <DashboardPage onLogout={handleLogout} />
-                    ) : (
-                      <Navigate to="/login" />
-                    )
-                  }
-                />
-                <Route
-                  path="/clientes"
-                  element={token ? <ClientesPage /> : <Navigate to="/login" />}
-                />
-                <Route
-                  path="/servicos"
-                  element={token ? <ServicosPage /> : <Navigate to="/login" />}
-                />
-                <Route
-                  path="/materiais"
-                  element={
-                    token ? (
-                      <MateriaisPage onLogout={handleLogout} />
-                    ) : (
-                      <Navigate to="/login" />
-                    )
-                  }
-                />
-                <Route
-                  path="/ordens"
-                  element={
-                    token ? <OrdensDeServicoPage /> : <Navigate to="/login" />
-                  }
-                />
-                <Route
-                  path="/ordens/novo"
-                  element={
-                    token ? (
-                      <OrdemDeServicoCreatePage onLogout={handleLogout} />
-                    ) : (
-                      <Navigate to="/login" />
-                    )
-                  }
-                />
-                <Route
-                  path="/ordens/:id"
-                  element={
-                    token ? (
-                      <OrdemDeServicoDetailPage />
-                    ) : (
-                      <Navigate to="/login" />
-                    )
-                  }
-                />
-                <Route
                   path="/login"
                   element={
                     !token ? (
@@ -515,6 +473,59 @@ function App() {
                   path="/register"
                   element={!token ? <RegisterPage /> : <Navigate to="/" />}
                 />
+                <Route element={<ProtectedRoute token={token} />}>
+                  <Route
+                    path="/"
+                    element={
+                      <DashboardPage token={token} onLogout={handleLogout} />
+                    }
+                  />
+                  <Route
+                    path="/clientes"
+                    element={
+                      <ClientesPage token={token} onLogout={handleLogout} />
+                    }
+                  />
+                  <Route
+                    path="/servicos"
+                    element={
+                      <ServicosPage token={token} onLogout={handleLogout} />
+                    }
+                  />
+                  <Route
+                    path="/materiais"
+                    element={
+                      <MateriaisPage token={token} onLogout={handleLogout} />
+                    }
+                  />
+                  <Route
+                    path="/ordens"
+                    element={
+                      <OrdensDeServicoPage
+                        token={token}
+                        onLogout={handleLogout}
+                      />
+                    }
+                  />
+                  <Route
+                    path="/ordens/novo"
+                    element={
+                      <OrdemDeServicoCreatePage
+                        token={token}
+                        onLogout={handleLogout}
+                      />
+                    }
+                  />
+                  <Route
+                    path="/ordens/:id"
+                    element={
+                      <OrdemDeServicoDetailPage
+                        token={token}
+                        onLogout={handleLogout}
+                      />
+                    }
+                  />
+                </Route>
               </Routes>
             </Box>
           </Box>

@@ -1,15 +1,14 @@
-// src/pages/OrdemDeServicoCreatePage.jsx (VERSÃO MODERNA)
+// src/pages/OrdemDeServicoCreatePage.jsx (VERSÃO MODERNA - CORRIGIDA COM PROP TOKEN)
 
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom"; // Adicionado Link
 import {
   Box,
   Typography,
   TextField,
   Button,
   Paper,
-  // Grid foi removido
   FormControl,
   InputLabel,
   Select,
@@ -23,10 +22,10 @@ import {
   TableRow,
   TableContainer,
   IconButton,
-  CircularProgress, // NOVO
-  Snackbar, // NOVO
-  Alert, // NOVO
-  useTheme, // NOVO
+  CircularProgress,
+  Snackbar,
+  Alert,
+  useTheme,
 } from "@mui/material";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -36,45 +35,52 @@ import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import DesignServicesIcon from "@mui/icons-material/DesignServices";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
+import InfoIcon from "@mui/icons-material/Info"; // Adicionado para estado vazio
 
-// Hook (mantido)
-const useAuthToken = () => {
-  return localStorage.getItem("accessToken");
-};
+// REMOVIDO: O hook useAuthToken não é mais necessário
+// const useAuthToken = () => {
+//  return sessionStorage.getItem("accessToken");
+// };
 
-function OrdemDeServicoCreatePage({ onLogout }) {
+// 1. Aceita 'token' e 'onLogout' como props
+function OrdemDeServicoCreatePage({ token, onLogout }) {
   const navigate = useNavigate();
-  const token = useAuthToken();
-  const theme = useTheme(); // NOVO
+  // const token = useAuthToken(); // REMOVIDO: token agora vem das props
+  const theme = useTheme();
 
-  // --- Estados principais da OS (mantidos) ---
+  // --- Estados (sem mudanças) ---
   const [clienteId, setClienteId] = useState("");
   const [enderecoServico, setEnderecoServico] = useState("");
   const [dataAgendamento, setDataAgendamento] = useState(null);
   const [servicosIds, setServicosIds] = useState([]);
-
-  // --- Estados de dropdowns (mantidos) ---
   const [clientes, setClientes] = useState([]);
   const [servicos, setServicos] = useState([]);
   const [materiais, setMateriais] = useState([]);
-
-  // --- Estados do "Carrinho" (mantidos) ---
   const [materiaisNoCarrinho, setMateriaisNoCarrinho] = useState([]);
   const [materialSelecionado, setMaterialSelecionado] = useState("");
   const [quantidadeMaterial, setQuantidadeMaterial] = useState(1);
-
-  // --- NOVO: Estados de UX ---
-  const [loading, setLoading] = useState(true); // Para o carregamento inicial
+  const [loading, setLoading] = useState(true);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
 
-  // 1. BUSCAR DADOS (com loading e snackbar)
+  // useEffect agora depende da prop 'token'
   useEffect(() => {
-    const config = { headers: { Authorization: `Bearer ${token}` } };
+    // 2. Verifica a prop 'token' antes de buscar
+    if (!token) {
+      setLoading(false);
+      // Limpa os dados caso o token desapareça (ex: logout em outra aba)
+      setClientes([]);
+      setServicos([]);
+      setMateriais([]);
+      return;
+    }
+
     setLoading(true);
+    // 3. Usa a prop 'token' na configuração
+    const config = { headers: { Authorization: `Bearer ${token}` } };
 
     const fetchClientes = axios.get(
       "http://127.0.0.1:8000/api/clientes/",
@@ -98,13 +104,8 @@ function OrdemDeServicoCreatePage({ onLogout }) {
       .catch((error) => {
         console.error("Erro ao buscar dados:", error);
         if (error.response && error.response.status === 401) {
-          // ALTERADO: Substituído alert()
-          setSnackbar({
-            open: true,
-            message: "Sua sessão expirou. Faça login novamente.",
-            severity: "error",
-          });
-          onLogout();
+          // Só chama logout se a prop existir
+          if (onLogout) onLogout();
         } else {
           setSnackbar({
             open: true,
@@ -114,11 +115,64 @@ function OrdemDeServicoCreatePage({ onLogout }) {
         }
       })
       .finally(() => {
-        setLoading(false); // NOVO
+        setLoading(false);
       });
+    // 4. Adiciona 'token' às dependências
   }, [token, onLogout]);
 
-  // 2. FUNÇÃO handleClienteChange (mantida)
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    // 5. Verifica a prop 'token' antes de submeter
+    if (!token) {
+      setSnackbar({
+        open: true,
+        message: "Erro de autenticação. Tente logar novamente.",
+        severity: "error",
+      });
+      return;
+    }
+
+    const materiaisParaEnviar = materiaisNoCarrinho.map((item) => ({
+      material_id: item.material_id,
+      quantidade: item.quantidade,
+    }));
+
+    const payload = {
+      cliente_id: parseInt(clienteId, 10),
+      endereco_servico: enderecoServico,
+      data_agendamento: dataAgendamento ? dataAgendamento.toISOString() : null,
+      servicos_ids: servicosIds,
+      materiais_para_adicionar: materiaisParaEnviar,
+      status: "AB",
+    };
+
+    try {
+      // 6. Usa a prop 'token' na configuração
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const response = await axios.post(
+        "http://127.0.0.1:8000/api/ordens/",
+        payload,
+        config
+      );
+      // Navega para a página de detalhes da OS recém-criada
+      // Adiciona um snackbar de sucesso antes de navegar (opcional)
+      // setSnackbar({ open: true, message: "Ordem de Serviço criada com sucesso!", severity: "success" });
+      navigate(`/ordens/${response.data.id}`);
+    } catch (error) {
+      console.error("Erro ao criar OS:", error.response?.data || error);
+      setSnackbar({
+        open: true,
+        message: "Erro ao criar Ordem de Serviço.",
+        severity: "error",
+      });
+      // 7. Adiciona tratamento de 401
+      if (error.response && error.response.status === 401) {
+        if (onLogout) onLogout();
+      }
+    }
+  };
+
+  // --- Funções handleClienteChange, handleAdicionarMaterial, handleRemoverMaterial, handleCloseSnackbar (sem mudanças na lógica do token) ---
   const handleClienteChange = (e) => {
     const id = e.target.value;
     setClienteId(id);
@@ -128,10 +182,8 @@ function OrdemDeServicoCreatePage({ onLogout }) {
     }
   };
 
-  // 3. FUNÇÕES DO "CARRINHO" (com snackbar)
   const handleAdicionarMaterial = () => {
     if (!materialSelecionado || quantidadeMaterial <= 0) {
-      // ALTERADO: Substituído alert()
       setSnackbar({
         open: true,
         message: "Selecione um material e uma quantidade válida.",
@@ -143,7 +195,6 @@ function OrdemDeServicoCreatePage({ onLogout }) {
       (item) => item.material_id === materialSelecionado
     );
     if (jaExiste) {
-      // ALTERADO: Substituído alert()
       setSnackbar({
         open: true,
         message: "Este material já foi adicionado.",
@@ -152,6 +203,15 @@ function OrdemDeServicoCreatePage({ onLogout }) {
       return;
     }
     const material = materiais.find((m) => m.id === materialSelecionado);
+    if (!material) {
+      // Verificação extra
+      setSnackbar({
+        open: true,
+        message: "Material selecionado inválido.",
+        severity: "error",
+      });
+      return;
+    }
     setMateriaisNoCarrinho([
       ...materiaisNoCarrinho,
       {
@@ -171,47 +231,6 @@ function OrdemDeServicoCreatePage({ onLogout }) {
     );
   };
 
-  // 4. FUNÇÃO DE SUBMISSÃO (com snackbar)
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    const materiaisParaEnviar = materiaisNoCarrinho.map((item) => ({
-      material_id: item.material_id,
-      quantidade: item.quantidade,
-    }));
-
-    const payload = {
-      cliente_id: parseInt(clienteId, 10),
-      endereco_servico: enderecoServico,
-      data_agendamento: dataAgendamento ? dataAgendamento.toISOString() : null,
-      servicos_ids: servicosIds,
-      materiais_para_adicionar: materiaisParaEnviar,
-      status: "AB",
-    };
-
-    try {
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      const response = await axios.post(
-        "http://127.0.0.1:8000/api/ordens/",
-        payload,
-        config
-      );
-      // O alert() de sucesso é substituído pela navegação
-      navigate(`/ordens/${response.data.id}`);
-    } catch (error) {
-      console.error("Erro ao criar OS:", error.response?.data || error);
-      // ALTERADO: Substituído alert()
-      setSnackbar({
-        open: true,
-        message: "Erro ao criar Ordem de Serviço.",
-        severity: "error",
-      });
-      if (error.response && error.response.status === 401) {
-        onLogout();
-      }
-    }
-  };
-
-  // NOVO: Handler do Snackbar
   const handleCloseSnackbar = (event, reason) => {
     if (reason === "clickaway") {
       return;
@@ -219,8 +238,9 @@ function OrdemDeServicoCreatePage({ onLogout }) {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  // NOVO: Estado de Loading
+  // --- Renderização (ajuste no loading) ---
   if (loading) {
+    // Mostra loading enquanto busca dados iniciais
     return (
       <Box
         sx={{
@@ -236,36 +256,65 @@ function OrdemDeServicoCreatePage({ onLogout }) {
     );
   }
 
+  // Se não estiver carregando, mas não houver clientes (provavelmente erro 401 não tratado ou API fora)
+  if (
+    !loading &&
+    clientes.length === 0 &&
+    servicos.length === 0 &&
+    materiais.length === 0
+  ) {
+    return (
+      <Paper
+        sx={{
+          p: 3,
+          m: 3,
+          display: "flex",
+          flexDirection: "column", // Empilha os itens
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 1,
+        }}
+      >
+        <InfoIcon color="warning" sx={{ fontSize: 40 }} />
+        <Typography variant="h6" color="text.secondary">
+          Não foi possível carregar os dados.
+        </Typography>
+        <Typography color="text.secondary">
+          Verifique sua conexão ou tente novamente mais tarde.
+        </Typography>
+        <Button component={Link} to="/" sx={{ mt: 2 }}>
+          Voltar para o Dashboard
+        </Button>
+      </Paper>
+    );
+  }
+
   return (
+    // Seu JSX existente continua aqui...
     <Box component="form" onSubmit={handleSubmit} sx={{ pb: 4 }}>
-      {" "}
-      {/* Padding no final */}
-      {/* ALTERADO: Título com ícone */}
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
         <ReceiptLongIcon fontSize="large" />
         <Typography variant="h4" component="h1">
           Criar Nova Ordem de Serviço
         </Typography>
       </Box>
-      {/* --- SEÇÃO DO CLIENTE E ENDEREÇO (CSS GRID) --- */}
+
       <Paper elevation={3} sx={{ p: 3, mb: 3, overflow: "hidden" }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
           <AccountCircleIcon />
           <Typography variant="h6">Dados do Cliente e Serviço</Typography>
         </Box>
 
-        {/* ALTERADO: de Flexbox para CSS Grid */}
         <Box
           sx={{
             display: "grid",
             gap: 2,
-            gridTemplateColumns: "1fr", // 1 coluna (mobile)
+            gridTemplateColumns: "1fr",
             [theme.breakpoints.up("md")]: {
-              gridTemplateColumns: "repeat(3, 1fr)", // 3 colunas (desktop)
+              gridTemplateColumns: "repeat(3, 1fr)",
             },
           }}
         >
-          {/* Coluna 1: Cliente (sem o <Box> wrapper) */}
           <FormControl fullWidth required>
             <InputLabel id="cliente-select-label">Cliente</InputLabel>
             <Select
@@ -282,17 +331,13 @@ function OrdemDeServicoCreatePage({ onLogout }) {
             </Select>
           </FormControl>
 
-          {/* Coluna 2: Data/Hora (sem o <Box> wrapper) */}
           <DateTimePicker
             label="Data e Hora do Agendamento"
             value={dataAgendamento}
             onChange={(newValue) => setDataAgendamento(newValue)}
-            // O renderInput agora é 'slots' e 'slotProps' em MUI v6+
-            // Mas mantendo o seu (v5), só precisamos garantir que o textfield é fullWidth
             renderInput={(params) => <TextField {...params} fullWidth />}
           />
 
-          {/* Coluna 3: Endereço (sem o <Box> wrapper) */}
           <TextField
             label="Endereço de Realização do Serviço"
             value={enderecoServico}
@@ -302,7 +347,7 @@ function OrdemDeServicoCreatePage({ onLogout }) {
           />
         </Box>
       </Paper>
-      {/* --- SEÇÃO DE SERVIÇOS --- */}
+
       <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
           <DesignServicesIcon />
@@ -333,27 +378,25 @@ function OrdemDeServicoCreatePage({ onLogout }) {
           </Select>
         </FormControl>
       </Paper>
-      {/* --- SEÇÃO DE MATERIAIS (CSS GRID) --- */}
+
       <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
           <Inventory2Icon />
           <Typography variant="h6">Materiais a Utilizar</Typography>
         </Box>
 
-        {/* ALTERADO: Inputs para adicionar material (CSS Grid) */}
         <Box
           sx={{
             display: "grid",
             gap: 2,
             mb: 2,
-            gridTemplateColumns: "1fr auto", // 2 colunas (mobile)
+            gridTemplateColumns: "1fr auto",
             [theme.breakpoints.up("sm")]: {
-              gridTemplateColumns: "3fr 1fr 1fr", // 3 colunas (desktop)
+              gridTemplateColumns: "3fr 1fr 1fr",
             },
-            alignItems: "start", // Alinha os itens no topo
+            alignItems: "start",
           }}
         >
-          {/* Ocupa a primeira coluna */}
           <FormControl fullWidth>
             <InputLabel id="material-select-label">Material</InputLabel>
             <Select
@@ -374,25 +417,21 @@ function OrdemDeServicoCreatePage({ onLogout }) {
             </Select>
           </FormControl>
 
-          {/* Ocupa a segunda coluna (mobile) e segunda (desktop) */}
           <TextField
             label="Qtde."
             type="number"
             value={quantidadeMaterial}
             onChange={(e) => setQuantidadeMaterial(e.target.value)}
             inputProps={{ min: 1 }}
-            // No mobile, o botão "Adicionar" quebra a linha
             sx={{ [theme.breakpoints.down("sm")]: { gridColumn: "1 / 2" } }}
           />
 
-          {/* Ocupa a segunda coluna (mobile) e terceira (desktop) */}
           <Button
             variant="contained"
             onClick={handleAdicionarMaterial}
             startIcon={<AddIcon />}
-            // No mobile, o botão fica ao lado da Qtde.
             sx={{
-              height: "56px", // Altura padrão do TextField
+              height: "56px",
               [theme.breakpoints.down("sm")]: {
                 gridColumn: "2 / 3",
                 justifySelf: "start",
@@ -403,7 +442,6 @@ function OrdemDeServicoCreatePage({ onLogout }) {
           </Button>
         </Box>
 
-        {/* Tabela de materiais no carrinho (com Estado Vazio) */}
         <TableContainer>
           <Table size="small">
             <TableHead>
@@ -415,7 +453,6 @@ function OrdemDeServicoCreatePage({ onLogout }) {
               </TableRow>
             </TableHead>
             <TableBody>
-              {/* NOVO: Estado Vazio */}
               {materiaisNoCarrinho.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} align="center">
@@ -450,21 +487,21 @@ function OrdemDeServicoCreatePage({ onLogout }) {
           </Table>
         </TableContainer>
       </Paper>
-      {/* --- BOTÃO DE SALVAR --- */}
+
       <Box
         sx={{
           display: "flex",
-          justifyContent: "flex-end", // Alinha à direita
-          gap: 2, // Espaço entre os botões
-          mt: 3, // Margem acima dos botões
+          justifyContent: "flex-end",
+          gap: 2,
+          mt: 3,
         }}
       >
         <Button
-          type="button" // Importante: para não submeter o formulário
+          type="button"
           variant="outlined"
-          color="inherit" // Cor neutra
+          color="inherit"
           size="large"
-          onClick={() => navigate("/ordens")} // Ação de cancelar
+          onClick={() => navigate("/ordens")}
         >
           Cancelar
         </Button>
@@ -479,7 +516,7 @@ function OrdemDeServicoCreatePage({ onLogout }) {
           Criar Ordem de Serviço
         </Button>
       </Box>
-      {/* NOVO: Componente Snackbar */}
+
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}

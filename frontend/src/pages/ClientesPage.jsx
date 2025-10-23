@@ -1,4 +1,4 @@
-// src/pages/ClientesPage.jsx (VERSÃO MODERNA)
+// src/pages/ClientesPage.jsx (VERSÃO MODERNA - CORRIGIDA COM PROP TOKEN)
 
 import { useState, useEffect } from "react";
 import axios from "axios";
@@ -16,18 +16,19 @@ import {
   TableHead,
   TableRow,
   IconButton,
-  CircularProgress, // NOVO: Para o loading
-  Snackbar, // NOVO: Para notificações
-  Alert, // NOVO: Para estilizar o Snackbar
-  useTheme, // NOVO: Para usar breakpoints no CSS Grid
+  CircularProgress,
+  Snackbar,
+  Alert,
+  useTheme,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-import AddIcon from "@mui/icons-material/Add"; // NOVO: Ícone para o botão
-import PeopleIcon from "@mui/icons-material/People"; // NOVO: Ícone para o título
-import InfoIcon from "@mui/icons-material/Info"; // NOVO: Ícone para a tabela vazia
+import AddIcon from "@mui/icons-material/Add";
+import PeopleIcon from "@mui/icons-material/People";
+import InfoIcon from "@mui/icons-material/Info";
 
-function ClientesPage({ onLogout }) {
+// Aceita 'token' e 'onLogout' como props
+function ClientesPage({ token, onLogout }) {
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [nome, setNome] = useState("");
@@ -38,51 +39,62 @@ function ClientesPage({ onLogout }) {
   const [observacoes, setObservacoes] = useState("");
   const [editingClient, setEditingClient] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const theme = useTheme(); // NOVO: Hook para acessar o tema
+  const theme = useTheme();
 
-  // NOVO: Estado para controlar o Snackbar
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
-    severity: "success", // 'success', 'error', 'warning', 'info'
+    severity: "success",
   });
 
-  const fetchClientes = async () => {
-    // ... (sua função fetchClientes continua idêntica, mas trocamos o alert)
-    try {
-      const token = localStorage.getItem("accessToken");
+  // fetchClientes agora usa a prop 'token' e depende dela no useEffect
+  useEffect(() => {
+    const fetchClientes = async () => {
+      // 1. Verifica a prop 'token' diretamente
       if (!token) {
         setLoading(false);
         return;
       }
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      const response = await axios.get(
-        "http://127.0.0.1:8000/api/clientes/",
-        config
-      );
-      setClientes(response.data);
-    } catch (error) {
-      console.error("Erro ao buscar clientes:", error);
-      if (error.response && error.response.status === 401) {
-        // ALTERADO: Substituímos o alert()
-        setSnackbar({
-          open: true,
-          message: "Sua sessão expirou. Por favor, faça login novamente.",
-          severity: "error",
-        });
-        onLogout(); // Desloga o usuário
+      setLoading(true); // Inicia o loading aqui
+      try {
+        // 2. Usa a prop 'token' na configuração
+        const config = { headers: { Authorization: `Bearer ${token}` } };
+        const response = await axios.get(
+          "http://127.0.0.1:8000/api/clientes/",
+          config
+        );
+        setClientes(response.data);
+      } catch (error) {
+        console.error("Erro ao buscar clientes:", error);
+        if (error.response && error.response.status === 401) {
+          if (onLogout) onLogout();
+        } else {
+          setSnackbar({
+            open: true,
+            message: "Erro ao buscar dados.",
+            severity: "error",
+          });
+        }
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  useEffect(() => {
     fetchClientes();
-  }, [onLogout]); // Adicione onLogout aqui se ele for uma prop
+    // 3. Adiciona 'token' às dependências do useEffect
+  }, [token, onLogout]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    // 4. Verifica a prop 'token' antes de tentar salvar
+    if (!token) {
+      setSnackbar({
+        open: true,
+        message: "Erro de autenticação. Tente logar novamente.",
+        severity: "error",
+      });
+      return;
+    }
     const clienteData = {
       nome,
       email,
@@ -93,7 +105,7 @@ function ClientesPage({ onLogout }) {
     };
 
     try {
-      const token = localStorage.getItem("accessToken");
+      // 5. Usa a prop 'token' na configuração (não precisa mais do sessionStorage.getItem)
       const config = { headers: { Authorization: `Bearer ${token}` } };
 
       if (editingClient) {
@@ -102,7 +114,6 @@ function ClientesPage({ onLogout }) {
           clienteData,
           config
         );
-        // ALTERADO: Substituímos o alert()
         setSnackbar({
           open: true,
           message: "Cliente atualizado com sucesso!",
@@ -114,41 +125,72 @@ function ClientesPage({ onLogout }) {
           clienteData,
           config
         );
-        // ALTERADO: Substituímos o alert()
         setSnackbar({
           open: true,
           message: "Cliente cadastrado com sucesso!",
           severity: "success",
         });
       }
-      fetchClientes();
+      // fetchClientes será chamado automaticamente pelo useEffect por causa da mudança no backend
+      // Mas podemos chamar manualmente se quisermos feedback imediato
+      // fetchClientes(); // <-- Isso pode causar um loop se o useEffect não estiver certo
+      // Atualiza a lista localmente para feedback mais rápido (opcional, mas bom UX)
+      if (editingClient) {
+        setClientes(
+          clientes.map((c) =>
+            c.id === editingClient.id
+              ? { ...clienteData, id: editingClient.id }
+              : c
+          )
+        );
+      } else {
+        // Precisamos do ID retornado pela API para adicionar corretamente
+        // A melhor forma é realmente re-buscar com fetchClientes() após o POST
+        // Chamaremos fetchClientes dentro do useEffect dependendo do 'token'
+        // Para forçar a atualização, podemos invalidar o token temporariamente (não ideal)
+        // Ou simplesmente esperar o próximo ciclo de renderização
+        // Vamos re-adicionar fetchClientes() aqui por simplicidade por enquanto
+        const response = await axios.get(
+          "http://127.0.0.1:8000/api/clientes/",
+          config
+        );
+        setClientes(response.data);
+      }
+
       setIsFormOpen(false);
       clearForm();
     } catch (error) {
       console.error("Erro ao salvar cliente:", error);
-      // ALTERADO: Substituímos o alert()
       setSnackbar({
         open: true,
         message: "Erro ao salvar cliente.",
         severity: "error",
       });
+      if (error.response && error.response.status === 401) {
+        if (onLogout) onLogout(); // Desloga se o erro for 401
+      }
     }
   };
 
-  // REMOVIDO: As funções handleCreateCliente e handleUpdateCliente
-  // (Elas eram redundantes, a handleSubmit já faz o trabalho)
-
   const handleDeleteCliente = async (clienteId) => {
+    // 6. Verifica a prop 'token'
+    if (!token) {
+      setSnackbar({
+        open: true,
+        message: "Erro de autenticação. Tente logar novamente.",
+        severity: "error",
+      });
+      return;
+    }
     if (window.confirm("Tem certeza que deseja deletar este cliente?")) {
       try {
-        const token = localStorage.getItem("accessToken");
+        // 7. Usa a prop 'token' na configuração
         const config = { headers: { Authorization: `Bearer ${token}` } };
         await axios.delete(
           `http://127.0.0.1:8000/api/clientes/${clienteId}/`,
           config
         );
         setClientes(clientes.filter((cliente) => cliente.id !== clienteId));
-        // ALTERADO: Substituímos o alert()
         setSnackbar({
           open: true,
           message: "Cliente deletado com sucesso!",
@@ -156,16 +198,19 @@ function ClientesPage({ onLogout }) {
         });
       } catch (error) {
         console.error("Erro ao deletar cliente:", error);
-        // ALTERADO: Substituímos o alert()
         setSnackbar({
           open: true,
           message: "Erro ao deletar cliente.",
           severity: "error",
         });
+        if (error.response && error.response.status === 401) {
+          if (onLogout) onLogout(); // Desloga se o erro for 401
+        }
       }
     }
   };
 
+  // --- Funções handleEditClick, handleCancel, clearForm, handleCloseSnackbar (sem mudanças) ---
   const handleEditClick = (cliente) => {
     setEditingClient(cliente);
     setNome(cliente.nome);
@@ -175,6 +220,7 @@ function ClientesPage({ onLogout }) {
     setPontoReferencia(cliente.ponto_referencia || "");
     setObservacoes(cliente.observacoes || "");
     setIsFormOpen(true);
+    window.scrollTo(0, 0); // Rola para o topo para ver o form
   };
 
   const handleCancel = () => {
@@ -192,7 +238,6 @@ function ClientesPage({ onLogout }) {
     setEditingClient(null);
   };
 
-  // NOVO: Função para fechar o Snackbar
   const handleCloseSnackbar = (event, reason) => {
     if (reason === "clickaway") {
       return;
@@ -200,8 +245,9 @@ function ClientesPage({ onLogout }) {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  // ALTERADO: Estado de loading profissional
-  if (loading) {
+  // --- Renderização (sem mudanças na estrutura JSX) ---
+  if (loading && clientes.length === 0) {
+    // Mostra loading só se não houver dados ainda
     return (
       <Box
         sx={{
@@ -217,6 +263,7 @@ function ClientesPage({ onLogout }) {
   }
 
   return (
+    // Seu JSX existente continua aqui...
     <Box>
       <Box
         sx={{
@@ -226,17 +273,15 @@ function ClientesPage({ onLogout }) {
           mb: 2,
         }}
       >
-        {/* ALTERADO: Título com ícone */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <PeopleIcon fontSize="large" />
           <Typography variant="h5" component="h2">
             Meus Clientes
           </Typography>
         </Box>
-        {/* ALTERADO: Botão com ícone */}
         <Button
           variant="contained"
-          startIcon={<AddIcon />} // Ícone adicionado
+          startIcon={<AddIcon />}
           onClick={() => {
             clearForm();
             setIsFormOpen(true);
@@ -252,16 +297,13 @@ function ClientesPage({ onLogout }) {
             {editingClient ? "Editar Cliente" : "Cadastrar Novo Cliente"}
           </Typography>
 
-          {/* ALTERADO: Formulário com CSS GRID */}
           <Box
             component="form"
             onSubmit={handleSubmit}
             sx={{
               display: "grid",
-              gap: 2, // Espaço entre os campos
-              // 1 coluna por padrão (mobile)
+              gap: 2,
               gridTemplateColumns: "1fr",
-              // 2 colunas para telas 'sm' (600px) e maiores
               [theme.breakpoints.up("sm")]: {
                 gridTemplateColumns: "1fr 1fr",
               },
@@ -278,7 +320,6 @@ function ClientesPage({ onLogout }) {
               value={telefone}
               onChange={(e) => setTelefone(e.target.value)}
             />
-            {/* NOVO: Campo ocupando 2 colunas */}
             <TextField
               label="Endereço"
               value={endereco}
@@ -296,7 +337,6 @@ function ClientesPage({ onLogout }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-            {/* NOVO: Campo ocupando 2 colunas */}
             <TextField
               label="Observações"
               value={observacoes}
@@ -306,13 +346,12 @@ function ClientesPage({ onLogout }) {
               sx={{ [theme.breakpoints.up("sm")]: { gridColumn: "1 / -1" } }}
             />
 
-            {/* NOVO: Box para alinhar botões à direita, ocupando 2 colunas */}
             <Box
               sx={{
                 display: "flex",
                 gap: 1,
                 justifyContent: "flex-end",
-                [theme.breakpoints.up("sm")]: { gridColumn: "1 / -1" }, // Ocupa a linha inteira
+                [theme.breakpoints.up("sm")]: { gridColumn: "1 / -1" },
               }}
             >
               <Button type="button" onClick={handleCancel} variant="outlined">
@@ -326,7 +365,6 @@ function ClientesPage({ onLogout }) {
         </Paper>
       </Collapse>
 
-      {/* Tabela (Layout já estava bom) */}
       <TableContainer component={Paper}>
         <Table
           size="small"
@@ -351,7 +389,6 @@ function ClientesPage({ onLogout }) {
               clientes.map((cliente) => (
                 <TableRow
                   key={cliente.id}
-                  // NOVO: Efeito de hover na linha
                   sx={{ "&:hover": { backgroundColor: "action.hover" } }}
                 >
                   <TableCell>{cliente.nome}</TableCell>
@@ -376,7 +413,6 @@ function ClientesPage({ onLogout }) {
                 </TableRow>
               ))
             ) : (
-              // ALTERADO: Estado vazio melhorado
               <TableRow>
                 <TableCell colSpan={5}>
                   <Box
@@ -400,10 +436,9 @@ function ClientesPage({ onLogout }) {
         </Table>
       </TableContainer>
 
-      {/* NOVO: Componente Snackbar para notificações */}
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={6000} // Fecha após 6 segundos
+        autoHideDuration={6000}
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >

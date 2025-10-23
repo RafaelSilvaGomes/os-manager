@@ -22,15 +22,19 @@ import {
 } from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles"; // Importamos o useTheme
 
-function DashboardPage({ onLogout }) {
+function DashboardPage({ token, onLogout }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const theme = useTheme(); // Hook para acessar o tema (necessário para os breakpoints)
 
   useEffect(() => {
     const fetchStats = async () => {
+      if (!token) {
+        setLoading(false);
+        return;
+      }
       try {
-        const token = localStorage.getItem("accessToken");
+        const token = sessionStorage.getItem("accessToken");
         if (!token) {
           setLoading(false);
           return;
@@ -44,7 +48,6 @@ function DashboardPage({ onLogout }) {
       } catch (error) {
         console.error("Erro ao buscar estatísticas do dashboard:", error);
         if (error.response && error.response.status === 401) {
-          alert("Sua sessão expirou. Por favor, faça login novamente.");
           if (onLogout) onLogout();
         }
       } finally {
@@ -52,7 +55,7 @@ function DashboardPage({ onLogout }) {
       }
     };
     fetchStats();
-  }, [onLogout]);
+  }, [token, onLogout]);
 
   if (loading) {
     return (

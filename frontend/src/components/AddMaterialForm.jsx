@@ -16,14 +16,16 @@ import {
   Typography,
 } from "@mui/material";
 
-function AddMaterialForm({ ordemId, onSuccess }) {
+function AddMaterialForm({ token, ordemId, onSuccess, onLogout, setSnackbar }) {
   const [materiais, setMateriais] = useState([]);
   const [materialId, setMaterialId] = useState("");
   const [quantidade, setQuantidade] = useState(1);
 
   useEffect(() => {
     const fetchMateriais = async () => {
-      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        return;
+      }
       const config = { headers: { Authorization: `Bearer ${token}` } };
       try {
         const response = await axios.get(
@@ -33,19 +35,29 @@ function AddMaterialForm({ ordemId, onSuccess }) {
         setMateriais(response.data);
       } catch (error) {
         console.error("Erro ao buscar catálogo de materiais:", error);
+        if (error.response && error.response.status === 401) {
+          if (onLogout) onLogout();
+        }
       }
     };
     fetchMateriais();
-  }, []);
+  }, [token, onLogout]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!materialId) {
-      alert("Por favor, selecione um material.");
+    if (!materialId || !token) {
+      if (setSnackbar) {
+        setSnackbar({
+          open: true,
+          message: "Por favor, selecione um material.",
+          severity: "warning",
+        });
+      } else {
+        alert("Por favor, selecione um material.");
+      }
       return;
     }
 
-    const token = localStorage.getItem("accessToken");
     const config = { headers: { Authorization: `Bearer ${token}` } };
     const data = {
       ordem_de_servico: ordemId,
@@ -59,13 +71,33 @@ function AddMaterialForm({ ordemId, onSuccess }) {
         data,
         config
       );
-      alert("Material adicionado com sucesso!");
+      if (setSnackbar) {
+        setSnackbar({
+          open: true,
+          message: "Material adicionado com sucesso!",
+          severity: "success",
+        });
+      } else {
+        alert("Material adicionado com sucesso!");
+      }
       setMaterialId("");
       setQuantidade(1);
       onSuccess();
     } catch (error) {
       console.error("Erro ao adicionar material:", error);
-      alert("Erro ao adicionar material.");
+      if (setSnackbar) {
+        setSnackbar({
+          open: true,
+          message: "Erro ao adicionar material.",
+          severity: "error",
+        });
+      } else {
+        alert("Erro ao adicionar material.");
+      }
+
+      if (error.response && error.response.status === 401) {
+        if (onLogout) onLogout();
+      }
     }
   };
 
