@@ -184,8 +184,26 @@ function App() {
   };
 
   const handleLogin = (accessToken) => {
-    setToken(accessToken);
-    sessionStorage.setItem("accessToken", accessToken);
+    // Espião A: Qual token CHEGOU aqui?
+    console.log("handleLogin: Token recebido =", accessToken);
+
+    // Tentativa de salvar no localStorage
+    try {
+      console.log("handleLogin: Tentando salvar no localStorage..."); // Espião B
+      localStorage.setItem('accessToken', accessToken);
+      console.log("handleLogin: Salvo no localStorage com sucesso."); // Espião C
+
+      // Verificação Imediata: O que REALMENTE ficou salvo?
+      const savedToken = localStorage.getItem('accessToken');
+      console.log("handleLogin: Token LIDO IMEDIATAMENTE do localStorage =", savedToken); // Espião D
+
+      // Atualiza o estado do React (Isso parece estar funcionando)
+      setToken(accessToken);
+
+    } catch (e) {
+      console.error("ERRO GRAVE AO SALVAR NO LOCALSTORAGE:", e); // Espião E (Erro)
+      alert("Ocorreu um erro ao salvar sua sessão. Tente limpar o cache do navegador.");
+    }
   };
 
   const handleLogout = () => {
@@ -524,6 +542,10 @@ function App() {
                         onLogout={handleLogout}
                       />
                     }
+                  />
+                  <Route
+                    path="/"
+                    element={token ? <DashboardPage token={token} onLogout={handleLogout} /> : <Navigate to="/login" />}
                   />
                 </Route>
               </Routes>

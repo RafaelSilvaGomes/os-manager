@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from .models import Cliente, Servico, OrdemDeServico, Material, MaterialUtilizado, Pagamento
 from rest_framework.views import APIView
 from django.utils import timezone
-from django.db.models import Sum, Value
+from django.db.models import Sum, Value, F
 from django.db.models.functions import Coalesce
 from decimal import Decimal
 from django.utils import timezone
@@ -76,44 +76,59 @@ class MaterialUtilizadoViewSet(viewsets.ModelViewSet):
 
 class PagamentoViewSet(viewsets.ModelViewSet):
     serializer_class = PagamentoSerializer
-    permission_classes = [IsAuthenticated] 
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        # Garante que o usuário só veja pagamentos das suas OS
         return Pagamento.objects.filter(ordem_de_servico__profissional=self.request.user)
 
+    # O método 'create' agora faz a validação e chama o perform_create
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        # --- NOSSA NOVA LÓGICA DE VALIDAÇÃO ---
         ordem_de_servico_obj = serializer.validated_data.get('ordem_de_servico')
-        
-        # Verifica o status da OS antes de prosseguir
-        if ordem_de_servico_obj.status in ['PG', 'CA']: # Se estiver Paga ou Cancelada
-            # Lança um erro de validação, que o DRF transforma em um erro 400 (Bad Request)
+
+        # Verifica se a OS pertence ao usuário logado (Segurança extra)
+        if ordem_de_servico_obj.profissional != request.user:
+             raise serializers.ValidationError("Você não tem permissão para registrar pagamento para esta OS.")
+
+        # --- LÓGICA DE VALIDAÇÃO ---
+        # Calculamos o valor pendente ANTES de tentar criar o pagamento
+        total_pago_anterior = ordem_de_servico_obj.pagamentos.aggregate(
+            total=Coalesce(Sum('valor_pago'), Value(Decimal('0.00')))
+        )['total']
+        valor_pendente = ordem_de_servico_obj.valor_total - total_pago_anterior
+        valor_pendente = valor_pendente.quantize(Decimal('0.01'), rounding='ROUND_HALF_UP')
+
+        # Se já estiver paga (valor pendente <= 0) OU Cancelada, rejeita
+        if valor_pendente <= 0 or ordem_de_servico_obj.status == 'CA':
             raise serializers.ValidationError(
                 "Esta Ordem de Serviço já está Paga ou Cancelada e não aceita novos pagamentos."
             )
         
-        # --- FIM DA NOVA LÓGICA ---
+        # --- FIM DA VALIDAÇÃO ---
 
-        # Se passou na validação, continua com a criação normal
-        self.perform_create(serializer)
+        # Se passou, continua com a criação, passando o valor a pagar
+        # Usamos **kwargs para passar o valor calculado para o perform_create
+        self.perform_create(serializer, valor_a_pagar=valor_pendente)
         headers = self.get_success_headers(serializer.data)
+        # Retornamos os dados do pagamento criado (incluindo o valor calculado)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-    
-    # 3. O método perform_create continua aqui, com a lógica de atualizar o status
-    def perform_create(self, serializer):
-        pagamento = serializer.save()
+
+    # O método 'perform_create' agora recebe o valor a pagar
+    def perform_create(self, serializer, valor_a_pagar):
+        # Salva o pagamento, mas sobrescreve o valor_pago com o calculado
+        pagamento = serializer.save(valor_pago=valor_a_pagar)
+
+        # Atualiza a OS para refletir a quitação
         ordem_de_servico = pagamento.ordem_de_servico
-        
-        total_pago = sum(p.valor_pago for p in ordem_de_servico.pagamentos.all())
-        
-        if total_pago >= ordem_de_servico.valor_total:
-          ordem_de_servico.status = 'PG'
-    # Adicione esta linha para registrar a data e hora atuais
-          ordem_de_servico.data_finalizacao = timezone.now() 
-          ordem_de_servico.save()
+        ordem_de_servico.status = 'PG'
+        ordem_de_servico.data_finalizacao = timezone.now()
+        # Opcional: Atualizar campos de valor_pago/pendente na OS se eles existirem como campos
+        # Se forem @property, não precisa salvar aqui, o serializer buscará o valor atualizado
+        # Vamos assumir que são @property por enquanto
+        ordem_de_servico.save(update_fields=['status', 'data_finalizacao']) # Salva apenas status e data
             
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()

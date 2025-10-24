@@ -9,6 +9,8 @@ from .models import (
     Pagamento,
 )
 from rest_framework import serializers, validators
+from django.db.models import Sum # Importe Sum e Decimal
+from decimal import Decimal
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -85,59 +87,97 @@ class PagamentoSerializer(serializers.ModelSerializer):
 
 
 class OrdemDeServicoSerializer(serializers.ModelSerializer):
+    # Campos Aninhados (para leitura/exibição)
+    cliente = ClienteSerializer(read_only=True)
     servicos = ServicoSerializer(many=True, read_only=True)
     materiais_utilizados = MaterialUtilizadoSerializer(many=True, read_only=True)
     pagamentos = PagamentoSerializer(many=True, read_only=True)
-    cliente = ClienteSerializer(read_only=True) 
 
-    cliente_id = serializers.IntegerField(write_only=True)
-    servicos_ids = serializers.ListField(
-        child=serializers.IntegerField(), write_only=True
+    # Campos para Escrita (receber IDs na criação/edição)
+    cliente_id = serializers.PrimaryKeyRelatedField(
+        queryset=Cliente.objects.all(), write_only=True, source='cliente', label="Cliente"
     )
-    materiais_para_adicionar = MaterialUtilizadoWriteSerializer(many=True, write_only=True)
+    servicos_ids = serializers.ListField(
+        child=serializers.PrimaryKeyRelatedField(queryset=Servico.objects.all()),
+        write_only=True, source='servicos', label="Serviços (IDs)"
+    )
+
+    # --- CAMPOS CALCULADOS ---
+    valor_servicos = serializers.SerializerMethodField()
+    valor_materiais = serializers.SerializerMethodField()
+    valor_total = serializers.SerializerMethodField()
+    valor_pago = serializers.SerializerMethodField()
+    valor_pendente = serializers.SerializerMethodField()
 
     class Meta:
         model = OrdemDeServico
         fields = [
             "id",
-            "cliente",
-            "cliente_id", 
-            "servicos",
-            "servicos_ids", 
-            "materiais_utilizados",
-            "materiais_para_adicionar",
-            "pagamentos",
+            "cliente", # Leitura
+            "cliente_id", # Escrita
+            "servicos", # Leitura
+            "servicos_ids", # Escrita
+            "materiais_utilizados", # Leitura
+            "pagamentos", # Leitura
             "status",
             "data_abertura",
+            "data_agendamento",
             "data_finalizacao",
-            "valor_total",
             "endereco_servico",
-            "data_agendamento", 
+
+            # Incluir os campos calculados
+            "valor_servicos",
+            "valor_materiais",
+            "valor_total",
+            "valor_pago",
+            "valor_pendente",
+        ]
+        # Campos que o frontend não deve enviar
+        read_only_fields = [
+            "data_abertura",
+            "data_finalizacao",
+            "valor_servicos",
+            "valor_materiais",
+            "valor_total",
+            "valor_pago",
+            "valor_pendente",
+            "cliente",
+            "servicos",
+            "materiais_utilizados",
+            "pagamentos",
         ]
 
-        read_only_fields = ["valor_total", "data_abertura"]
+    # --- MÉTODOS DE CÁLCULO INTERNOS ---
+    def get_valor_servicos(self, obj):
+        # Soma os preços dos serviços associados
+        total = obj.servicos.aggregate(total=Sum('preco'))['total'] or Decimal('0.00')
+        return total.quantize(Decimal('0.01'))
 
-    def create(self, validated_data):
-        servicos_data = validated_data.pop('servicos_ids')
-        materiais_data = validated_data.pop('materiais_para_adicionar')
+    def get_valor_materiais(self, obj):
+        # Soma o custo dos materiais utilizados
+        total = Decimal('0.00')
+        # Para otimizar, a ViewSet que usa este serializer pode usar prefetch_related('materiais_utilizados__material')
+        for mu in obj.materiais_utilizados.all():
+            if mu.material: # Verifica se o material ainda existe
+               total += mu.quantidade * mu.material.preco_unidade
+        return total.quantize(Decimal('0.01'))
 
-        validated_data['cliente_id'] = validated_data.pop('cliente_id')
+    def get_valor_total(self, obj):
+        # Reutiliza os métodos acima para calcular o total
+        valor_servicos = self.get_valor_servicos(obj)
+        valor_materiais = self.get_valor_materiais(obj)
+        return (valor_servicos + valor_materiais).quantize(Decimal('0.01'))
 
-        ordem_de_servico = OrdemDeServico.objects.create(**validated_data)
+    def get_valor_pago(self, obj):
+        # Soma os pagamentos associados
+        total = obj.pagamentos.aggregate(total=Sum('valor_pago'))['total'] or Decimal('0.00')
+        return total.quantize(Decimal('0.01'))
 
-        ordem_de_servico.servicos.set(servicos_data)
-        
-        for item in materiais_data:
-            MaterialUtilizado.objects.create(
-                ordem_de_servico=ordem_de_servico,
-                material_id=item['material_id'],
-                quantidade=item['quantidade']
-            )
-
-        ordem_de_servico.calcular_e_salvar_total()
-
-        return ordem_de_servico
-
+    def get_valor_pendente(self, obj):
+        # Calcula Total - Pago, reutilizando os métodos
+        valor_total = self.get_valor_total(obj)
+        valor_pago = self.get_valor_pago(obj)
+        return (valor_total - valor_pago).quantize(Decimal('0.01'))
 
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:

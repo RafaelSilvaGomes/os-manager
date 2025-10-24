@@ -504,6 +504,7 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
             ordemId={id}
             onSuccess={fetchOrdemDetalhes}
             onLogout={onLogout}
+            valorPendente={ordem?.valor_pendente}
           />
         </Paper>
       </Box>
