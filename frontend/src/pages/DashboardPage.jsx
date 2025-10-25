@@ -5,17 +5,16 @@ import axios from 'axios';
 import { Box, Card, CardContent, Typography, CircularProgress } from '@mui/material';
 import {
   Groups as GroupsIcon,
-  Build as BuildIcon, // Vamos manter, mesmo sem o dado ainda
+  Build as BuildIcon,
   PlaylistAddCheck as PlaylistAddCheckIcon,
   MonetizationOn as MonetizationOnIcon,
   AccessTime as AccessTimeIcon,
-  Work as WorkIcon, // Vamos manter
-  CheckCircle as CheckCircleIcon, // Vamos manter
+  Work as WorkIcon,
+  CheckCircle as CheckCircleIcon,
   Lightbulb as LightbulbIcon,
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 
-// 1. Recebe 'token' e 'onLogout' como props
 function DashboardPage({ token, onLogout }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -23,15 +22,13 @@ function DashboardPage({ token, onLogout }) {
 
   useEffect(() => {
     const fetchStats = async () => {
-      // 2. Verifica a prop 'token' primeiro
       if (!token) {
         console.error("Dashboard: Prop 'token' não encontrada.");
         setLoading(false);
-        return; // Sai se não houver token
+        return;
       }
-      setLoading(true); // Ativa o loading
+      setLoading(true);
       try {
-        // 3. Usa a prop 'token' diretamente
         const config = { headers: { Authorization: `Bearer ${token}` } };
         const response = await axios.get(
           "http://127.0.0.1:8000/api/dashboard/stats/",
@@ -40,17 +37,14 @@ function DashboardPage({ token, onLogout }) {
         setStats(response.data);
       } catch (error) {
         console.error("Erro ao buscar estatísticas do dashboard:", error);
-        // 4. Verifica se o erro é 401 e chama onLogout
         if (error.response && error.response.status === 401) {
-          if (onLogout) onLogout(); // Chama a função de logout passada pelo App.jsx
+          if (onLogout) onLogout(); 
         }
-        // Não precisamos de setError aqui, o 'if (!stats)' abaixo já trata
       } finally {
         setLoading(false);
       }
     };
     fetchStats();
-    // 5. Dependências corretas do useEffect
   }, [token, onLogout]);
 
   if (loading) {
@@ -61,7 +55,6 @@ function DashboardPage({ token, onLogout }) {
     );
   }
 
-  // 6. Mensagem de erro mais clara se os stats não carregarem
   if (!stats) {
     return (
       <Typography color="error" sx={{ textAlign: 'center', mt: 4 }}>
@@ -70,18 +63,16 @@ function DashboardPage({ token, onLogout }) {
     );
   }
 
-  // 7. Usamos diretamente os dados que VÊM da API (stats)
-  //    e colocamos 0 onde o dado ainda não existe no backend
   const displayStats = {
     totalClientes: stats?.total_clientes || 0,
-    totalServicos: 0, // Mock: Backend não envia ainda
+    totalServicos: 0,
     ordensAtivas: stats?.ordens_abertas || 0,
     receitaMes: stats?.faturamento_mes || "0.00",
     ordensAbertasDetalhe: stats?.ordens_abertas || 0,
-    ordensEmAndamentoDetalhe: 0, // Mock: Backend não envia ainda
-    ordensConcluidasDetalhe: 0, // Mock: Backend não envia ainda
-    receitaTotal: "0.00", // Mock: Backend não envia ainda
-    ticketMedio: "0.00", // Mock: Backend não envia ainda
+    ordensEmAndamentoDetalhe: 0, 
+    ordensConcluidasDetalhe: 0, 
+    receitaTotal: "0.00", 
+    ticketMedio: "0.00",
   };
 
   return (
@@ -93,7 +84,6 @@ function DashboardPage({ token, onLogout }) {
         Visão geral do seu negócio
       </Typography>
 
-      {/* Grid para os Cards de KPIs */}
       <Box
         sx={{
           display: "grid", gap: 3, mb: 4,
@@ -102,7 +92,6 @@ function DashboardPage({ token, onLogout }) {
           [theme.breakpoints.up("md")]: { gridTemplateColumns: "repeat(4, 1fr)" },
         }}
       >
-        {/* Card: Total Clientes */}
         <Card sx={{ display: 'flex', alignItems: 'center', p: 2, backgroundColor: '#3a3f5a', color: 'white' }}>
           <GroupsIcon sx={{ fontSize: 40, mr: 2 }} />
           <Box>
@@ -111,7 +100,6 @@ function DashboardPage({ token, onLogout }) {
           </Box>
         </Card>
 
-        {/* Card: Total Serviços (Mockado) */}
         <Card sx={{ display: 'flex', alignItems: 'center', p: 2, backgroundColor: '#624D8C', color: 'white' }}>
            <BuildIcon sx={{ fontSize: 40, mr: 2 }} />
            <Box>
@@ -120,7 +108,6 @@ function DashboardPage({ token, onLogout }) {
            </Box>
          </Card>
 
-        {/* Card: Ordens Ativas */}
         <Card sx={{ display: 'flex', alignItems: 'center', p: 2, backgroundColor: '#b8860b', color: 'white' }}>
           <PlaylistAddCheckIcon sx={{ fontSize: 40, mr: 2 }} />
           <Box>
@@ -129,7 +116,6 @@ function DashboardPage({ token, onLogout }) {
           </Box>
         </Card>
 
-        {/* Card: Receita do Mês */}
         <Card sx={{ display: 'flex', alignItems: 'center', p: 2, backgroundColor: '#388E3C', color: 'white' }}>
           <MonetizationOnIcon sx={{ fontSize: 40, mr: 2 }} />
           <Box>
@@ -139,7 +125,6 @@ function DashboardPage({ token, onLogout }) {
         </Card>
       </Box>
 
-      {/* Grid para Status das Ordens e Resumo Financeiro */}
       <Box
         sx={{
           display: "grid", gap: 3,
@@ -147,7 +132,6 @@ function DashboardPage({ token, onLogout }) {
           [theme.breakpoints.up("md")]: { gridTemplateColumns: "repeat(2, 1fr)" },
         }}
       >
-        {/* Card: Status das Ordens */}
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>Status das Ordens</Typography>
@@ -174,7 +158,6 @@ function DashboardPage({ token, onLogout }) {
           </CardContent>
         </Card>
 
-        {/* Card: Resumo Financeiro (Mockado) */}
         <Card>
            <CardContent>
              <Typography variant="h6" gutterBottom>Resumo Financeiro</Typography>
@@ -185,7 +168,7 @@ function DashboardPage({ token, onLogout }) {
                </Box>
                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                  <Typography variant="body1">Receita Total (Mês)</Typography>
-                 <Typography variant="h6">R$ {displayStats.receitaMes}</Typography> {/* Usando a receita do mês aqui */}
+                 <Typography variant="h6">R$ {displayStats.receitaMes}</Typography>
                </Box>
                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                  <Typography variant="body1">Ticket Médio (Mês)</Typography>
@@ -196,7 +179,6 @@ function DashboardPage({ token, onLogout }) {
          </Card>
       </Box>
       
-      {/* Dica Rápida */}
       <Card sx={{ mt: 4, backgroundColor: 'action.hover', display: 'flex', alignItems: 'center', p: 2 }}>
         <LightbulbIcon sx={{ fontSize: 30, color: 'warning.light', mr: 2 }} />
         <Typography variant="body1">

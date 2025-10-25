@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 
-// 1. Importações do Material-UI (adicionamos Paper, Avatar e um ícone)
 import {
   Button,
   TextField,
@@ -14,7 +13,7 @@ import {
   Paper,
   Avatar,
 } from "@mui/material";
-import LockOutlinedIcon from "@mui/icons-material/LockOutlined"; // Importa o ícone de cadeado
+import LockOutlinedIcon from "@mui/icons-material/LockOutlined"; 
 
 function LoginPage({ onLogin }) {
   const [username, setUsername] = useState("");
@@ -36,29 +35,26 @@ function LoginPage({ onLogin }) {
   };
 
   return (
-    // 2. Usamos um Container para ocupar a tela inteira e centralizar o conteúdo
     <Container
       component="main"
       maxWidth={false}
       sx={{
-        flexGrow: 1, // <-- A MUDANÇA FINAL E CORRETA É ESTA
+        flexGrow: 1,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
       }}
     >
-      {/* 3. O Paper cria o efeito de "card" com sombra */}
       <Paper
-        elevation={6} // Controla a intensidade da sombra
+        elevation={6} 
         sx={{
-          padding: 4, // Espaçamento interno (32px)
+          padding: 4, 
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          maxWidth: "400px", // Define uma largura máxima para o card
+          maxWidth: "400px",
         }}
       >
-        {/* 4. Avatar com o ícone para um visual profissional */}
         <Avatar sx={{ m: 1, bgcolor: "primary.main" }}>
           <LockOutlinedIcon />
         </Avatar>
@@ -100,7 +96,6 @@ function LoginPage({ onLogin }) {
           </Button>
           <Typography variant="body2" align="center">
             Não tem uma conta?{" "}
-            {/* Usamos o componente Link do MUI para consistência */}
             <Link
               to="/register"
               style={{ color: "#1976d2", textDecoration: "none" }}

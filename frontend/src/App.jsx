@@ -1,11 +1,11 @@
-// src/App.jsx (VERSÃO ATUALIZADA COM CONFIGURAÇÕES E TEMAS)
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+
+import { useState, useEffect, useMemo } from "react";
 import { BrowserRouter, Routes, Route, Navigate, Link } from "react-router-dom";
 import "./App.css";
 import ProtectedRoute from "./components/ProtectedRoute";
 
-// --- Importações MUI ---
+
 import {
   ThemeProvider,
   createTheme,
@@ -184,24 +184,24 @@ function App() {
   };
 
   const handleLogin = (accessToken) => {
-    // Espião A: Qual token CHEGOU aqui?
+    
     console.log("handleLogin: Token recebido =", accessToken);
 
-    // Tentativa de salvar no localStorage
+    
     try {
-      console.log("handleLogin: Tentando salvar no localStorage..."); // Espião B
+      console.log("handleLogin: Tentando salvar no localStorage..."); 
       localStorage.setItem('accessToken', accessToken);
-      console.log("handleLogin: Salvo no localStorage com sucesso."); // Espião C
+      console.log("handleLogin: Salvo no localStorage com sucesso."); 
 
-      // Verificação Imediata: O que REALMENTE ficou salvo?
+      
       const savedToken = localStorage.getItem('accessToken');
-      console.log("handleLogin: Token LIDO IMEDIATAMENTE do localStorage =", savedToken); // Espião D
+      console.log("handleLogin: Token LIDO IMEDIATAMENTE do localStorage =", savedToken); 
 
-      // Atualiza o estado do React (Isso parece estar funcionando)
+      
       setToken(accessToken);
 
     } catch (e) {
-      console.error("ERRO GRAVE AO SALVAR NO LOCALSTORAGE:", e); // Espião E (Erro)
+      console.error("ERRO GRAVE AO SALVAR NO LOCALSTORAGE:", e); 
       alert("Ocorreu um erro ao salvar sua sessão. Tente limpar o cache do navegador.");
     }
   };
@@ -229,7 +229,7 @@ function App() {
                   <Typography
                     variant="h6"
                     component="div"
-                    // Adicionamos display:flex para alinhar o ícone e o texto
+                    
                     sx={{
                       mr: 2,
                       display: "flex",
@@ -243,7 +243,6 @@ function App() {
                         professionPalettes[firstProfessionKey]
                       ).icon
                     }
-                    {/* Seu novo texto */}
                     OrdemPro
                   </Typography>
 
@@ -252,7 +251,7 @@ function App() {
                       flexGrow: 1,
                       display: "flex",
                       gap: 1,
-                      justifyContent: "center", // <--- ADICIONE ESTA LINHA
+                      justifyContent: "center", 
                     }}
                   >
                     <Button
@@ -440,7 +439,6 @@ function App() {
                           },
                         }}
                       >
-                        {/* Ícone */}
                         {value.icon ? (
                           <value.icon.type
                             {...value.icon.props}
@@ -449,7 +447,7 @@ function App() {
                         ) : (
                           <BuildIcon sx={{ fontSize: 40, mb: 1 }} />
                         )}
-                        {/* Nome da Profissão */}
+
                         <Typography
                           variant="body1"
                           component="div"

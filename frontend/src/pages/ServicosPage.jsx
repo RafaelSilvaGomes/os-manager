@@ -1,5 +1,3 @@
-// src/pages/ServicosPage.jsx (VERSÃO MODERNA - CORRIGIDA COM PROP TOKEN)
-
 import { useState, useEffect } from "react";
 import axios from "axios";
 import {
@@ -23,7 +21,6 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import InfoIcon from "@mui/icons-material/Info";
 
-// 1. Aceita 'token' e 'onLogout' como props
 function ServicosPage({ token, onLogout }) {
   const [servicos, setServicos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,25 +31,21 @@ function ServicosPage({ token, onLogout }) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const theme = useTheme();
 
-  // Estado do Snackbar (sem mudanças)
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
 
-  // useEffect agora depende da prop 'token'
   useEffect(() => {
     const fetchServicos = async () => {
-      // 2. Verifica a prop 'token'
       if (!token) {
         setLoading(false);
-        setServicos([]); // Limpa serviços se não houver token
+        setServicos([]);
         return;
       }
       setLoading(true);
       try {
-        // 3. Usa a prop 'token' na configuração
         const config = { headers: { Authorization: `Bearer ${token}` } };
         const response = await axios.get(
           "http://127.0.0.1:8000/api/servicos/",
@@ -62,7 +55,6 @@ function ServicosPage({ token, onLogout }) {
       } catch (error) {
         console.error("Erro ao buscar serviços:", error);
         if (error.response && error.response.status === 401) {
-          // Só chama logout se a prop existir
           if (onLogout) onLogout();
         } else {
           setSnackbar({
@@ -77,12 +69,10 @@ function ServicosPage({ token, onLogout }) {
     };
 
     fetchServicos();
-    // 4. Adiciona 'token' às dependências
   }, [token, onLogout]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    // 5. Verifica a prop 'token'
     if (!token) {
       setSnackbar({
         open: true,
@@ -94,10 +84,9 @@ function ServicosPage({ token, onLogout }) {
     const servicoData = { nome, descricao, preco };
 
     try {
-      // 6. Usa a prop 'token' na configuração
       const config = { headers: { Authorization: `Bearer ${token}` } };
 
-      let updatedService = null; // Para atualizar estado local
+      let updatedService = null;
 
       if (editingServico) {
         const response = await axios.put(
@@ -125,7 +114,6 @@ function ServicosPage({ token, onLogout }) {
         });
       }
 
-      // Atualiza estado local para feedback imediato
       if (editingServico) {
         setServicos(
           servicos.map((s) => (s.id === updatedService.id ? updatedService : s))
@@ -134,7 +122,6 @@ function ServicosPage({ token, onLogout }) {
         setServicos([...servicos, updatedService]);
       }
 
-      // fetchServicos(); // Não é mais estritamente necessário
       setIsFormOpen(false);
       clearForm();
     } catch (error) {
@@ -144,7 +131,6 @@ function ServicosPage({ token, onLogout }) {
         message: "Erro ao salvar serviço.",
         severity: "error",
       });
-      // 7. Adiciona tratamento de 401
       if (error.response && error.response.status === 401) {
         if (onLogout) onLogout();
       }
@@ -152,7 +138,6 @@ function ServicosPage({ token, onLogout }) {
   };
 
   const handleDeleteServico = async (servicoId) => {
-    // 8. Verifica a prop 'token'
     if (!token) {
       setSnackbar({
         open: true,
@@ -161,10 +146,8 @@ function ServicosPage({ token, onLogout }) {
       });
       return;
     }
-    // TODO: Substituir window.confirm
     if (window.confirm("Tem certeza que deseja deletar este serviço?")) {
       try {
-        // 9. Usa a prop 'token' na configuração
         const config = { headers: { Authorization: `Bearer ${token}` } };
         await axios.delete(
           `http://127.0.0.1:8000/api/servicos/${servicoId}/`,
@@ -183,7 +166,6 @@ function ServicosPage({ token, onLogout }) {
           message: "Erro ao deletar serviço.",
           severity: "error",
         });
-        // 10. Adiciona tratamento de 401
         if (error.response && error.response.status === 401) {
           if (onLogout) onLogout();
         }
@@ -191,14 +173,13 @@ function ServicosPage({ token, onLogout }) {
     }
   };
 
-  // --- Funções handleEditClick, handleCancel, clearForm, handleCloseSnackbar (sem mudanças) ---
   const handleEditClick = (servico) => {
     setEditingServico(servico);
     setNome(servico.nome);
     setDescricao(servico.descricao || "");
     setPreco(servico.preco);
     setIsFormOpen(true);
-    window.scrollTo(0, 0); // Rola para o topo
+    window.scrollTo(0, 0);
   };
 
   const handleCancel = () => {
@@ -220,9 +201,7 @@ function ServicosPage({ token, onLogout }) {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  // --- Renderização (ajuste no loading) ---
   if (loading && servicos.length === 0) {
-    // Mostra loading só se não houver dados ainda
     return (
       <Box
         sx={{
@@ -238,7 +217,6 @@ function ServicosPage({ token, onLogout }) {
   }
 
   return (
-    // Seu JSX existente continua aqui...
     <Box>
       <Box
         sx={{
@@ -278,9 +256,9 @@ function ServicosPage({ token, onLogout }) {
             sx={{
               display: "grid",
               gap: 2,
-              gridTemplateColumns: "1fr", // Mobile
+              gridTemplateColumns: "1fr", 
               [theme.breakpoints.up("sm")]: {
-                gridTemplateColumns: "1fr 1fr", // Desktop
+                gridTemplateColumns: "1fr 1fr",
               },
             }}
           >

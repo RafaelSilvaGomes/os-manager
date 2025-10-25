@@ -24,31 +24,26 @@ import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import DeleteIcon from "@mui/icons-material/Delete";
 import InfoIcon from "@mui/icons-material/Info";
 
-// 1. Aceita 'token' e 'onLogout' como props
 function OrdensDeServicoPage({ token, onLogout }) {
   const [ordens, setOrdens] = useState([]);
   const [loading, setLoading] = useState(true);
   const theme = useTheme();
 
-  // Estado do Snackbar (sem mudanças)
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
 
-  // useEffect agora depende da prop 'token'
   useEffect(() => {
     const fetchOrdens = async () => {
-      // 2. Verifica a prop 'token'
       if (!token) {
         setLoading(false);
-        setOrdens([]); // Limpa as ordens se não houver token
+        setOrdens([]); 
         return;
       }
       setLoading(true);
       try {
-        // 3. Usa a prop 'token' na configuração
         const config = { headers: { Authorization: `Bearer ${token}` } };
         const response = await axios.get(
           "http://127.0.0.1:8000/api/ordens/",
@@ -58,7 +53,6 @@ function OrdensDeServicoPage({ token, onLogout }) {
       } catch (error) {
         console.error("Erro ao buscar Ordens de Serviço:", error);
         if (error.response && error.response.status === 401) {
-          // Só chama logout se a prop existir
           if (onLogout) onLogout();
         } else {
           setSnackbar({
@@ -72,10 +66,8 @@ function OrdensDeServicoPage({ token, onLogout }) {
       }
     };
     fetchOrdens();
-    // 4. Adiciona 'token' às dependências
   }, [token, onLogout]);
 
-  // Funções de Status (sem mudanças)
   const getStatusColor = (status) => {
     switch (status) {
       case "AB":
@@ -109,7 +101,6 @@ function OrdensDeServicoPage({ token, onLogout }) {
     }
   };
 
-  // Handler do Snackbar (sem mudanças)
   const handleCloseSnackbar = (event, reason) => {
     if (reason === "clickaway") {
       return;
@@ -118,7 +109,6 @@ function OrdensDeServicoPage({ token, onLogout }) {
   };
 
   const handleDeleteOrdem = async (ordemId) => {
-    // 5. Verifica a prop 'token'
     if (!token) {
       setSnackbar({
         open: true,
@@ -127,14 +117,12 @@ function OrdensDeServicoPage({ token, onLogout }) {
       });
       return;
     }
-    // TODO: Substituir window.confirm
     if (
       window.confirm(
         "Tem certeza que deseja deletar esta Ordem de Serviço? Esta ação não pode ser desfeita."
       )
     ) {
       try {
-        // 6. Usa a prop 'token' na configuração
         const config = { headers: { Authorization: `Bearer ${token}` } };
         await axios.delete(
           `http://127.0.0.1:8000/api/ordens/${ordemId}/`,
@@ -153,7 +141,6 @@ function OrdensDeServicoPage({ token, onLogout }) {
           message: "Erro ao deletar a Ordem de Serviço.",
           severity: "error",
         });
-        // 7. Adiciona tratamento de 401
         if (error.response && error.response.status === 401) {
           if (onLogout) onLogout();
         }
@@ -161,9 +148,7 @@ function OrdensDeServicoPage({ token, onLogout }) {
     }
   };
 
-  // --- Renderização (ajuste no loading) ---
   if (loading && ordens.length === 0) {
-    // Mostra loading só se não houver dados ainda
     return (
       <Box
         sx={{
@@ -179,7 +164,6 @@ function OrdensDeServicoPage({ token, onLogout }) {
   }
 
   return (
-    // Seu JSX existente continua aqui...
     <Box>
       <Box
         sx={{

@@ -1,5 +1,3 @@
-// src/pages/RegisterPage.jsx
-
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -25,10 +23,9 @@ function RegisterPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Usando a URL correta do nosso backend
       await axios.post("http://127.0.0.1:8000/api/user/register/", formData);
       alert("Cadastro realizado com sucesso! Por favor, faça o login.");
-      navigate("/login"); // Redireciona para a página de login
+      navigate("/login");
     } catch (error) {
       console.error("Houve um erro no cadastro!", error.response?.data);
       alert("Erro no cadastro: " + JSON.stringify(error.response?.data));

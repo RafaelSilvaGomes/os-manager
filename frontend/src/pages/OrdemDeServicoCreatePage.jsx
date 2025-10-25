@@ -1,8 +1,6 @@
-// src/pages/OrdemDeServicoCreatePage.jsx (VERSÃO MODERNA - CORRIGIDA COM PROP TOKEN)
-
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { useNavigate, Link } from "react-router-dom"; // Adicionado Link
+import { useNavigate, Link } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -35,20 +33,12 @@ import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import DesignServicesIcon from "@mui/icons-material/DesignServices";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
-import InfoIcon from "@mui/icons-material/Info"; // Adicionado para estado vazio
+import InfoIcon from "@mui/icons-material/Info";
 
-// REMOVIDO: O hook useAuthToken não é mais necessário
-// const useAuthToken = () => {
-//  return sessionStorage.getItem("accessToken");
-// };
-
-// 1. Aceita 'token' e 'onLogout' como props
 function OrdemDeServicoCreatePage({ token, onLogout }) {
   const navigate = useNavigate();
-  // const token = useAuthToken(); // REMOVIDO: token agora vem das props
   const theme = useTheme();
 
-  // --- Estados (sem mudanças) ---
   const [clienteId, setClienteId] = useState("");
   const [enderecoServico, setEnderecoServico] = useState("");
   const [dataAgendamento, setDataAgendamento] = useState(null);
@@ -66,12 +56,9 @@ function OrdemDeServicoCreatePage({ token, onLogout }) {
     severity: "success",
   });
 
-  // useEffect agora depende da prop 'token'
   useEffect(() => {
-    // 2. Verifica a prop 'token' antes de buscar
     if (!token) {
       setLoading(false);
-      // Limpa os dados caso o token desapareça (ex: logout em outra aba)
       setClientes([]);
       setServicos([]);
       setMateriais([]);
@@ -79,7 +66,6 @@ function OrdemDeServicoCreatePage({ token, onLogout }) {
     }
 
     setLoading(true);
-    // 3. Usa a prop 'token' na configuração
     const config = { headers: { Authorization: `Bearer ${token}` } };
 
     const fetchClientes = axios.get(
@@ -104,7 +90,6 @@ function OrdemDeServicoCreatePage({ token, onLogout }) {
       .catch((error) => {
         console.error("Erro ao buscar dados:", error);
         if (error.response && error.response.status === 401) {
-          // Só chama logout se a prop existir
           if (onLogout) onLogout();
         } else {
           setSnackbar({
@@ -117,12 +102,10 @@ function OrdemDeServicoCreatePage({ token, onLogout }) {
       .finally(() => {
         setLoading(false);
       });
-    // 4. Adiciona 'token' às dependências
   }, [token, onLogout]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    // 5. Verifica a prop 'token' antes de submeter
     if (!token) {
       setSnackbar({
         open: true,
@@ -147,16 +130,12 @@ function OrdemDeServicoCreatePage({ token, onLogout }) {
     };
 
     try {
-      // 6. Usa a prop 'token' na configuração
       const config = { headers: { Authorization: `Bearer ${token}` } };
       const response = await axios.post(
         "http://127.0.0.1:8000/api/ordens/",
         payload,
         config
       );
-      // Navega para a página de detalhes da OS recém-criada
-      // Adiciona um snackbar de sucesso antes de navegar (opcional)
-      // setSnackbar({ open: true, message: "Ordem de Serviço criada com sucesso!", severity: "success" });
       navigate(`/ordens/${response.data.id}`);
     } catch (error) {
       console.error("Erro ao criar OS:", error.response?.data || error);
@@ -165,14 +144,13 @@ function OrdemDeServicoCreatePage({ token, onLogout }) {
         message: "Erro ao criar Ordem de Serviço.",
         severity: "error",
       });
-      // 7. Adiciona tratamento de 401
+
       if (error.response && error.response.status === 401) {
         if (onLogout) onLogout();
       }
     }
   };
 
-  // --- Funções handleClienteChange, handleAdicionarMaterial, handleRemoverMaterial, handleCloseSnackbar (sem mudanças na lógica do token) ---
   const handleClienteChange = (e) => {
     const id = e.target.value;
     setClienteId(id);
@@ -204,7 +182,6 @@ function OrdemDeServicoCreatePage({ token, onLogout }) {
     }
     const material = materiais.find((m) => m.id === materialSelecionado);
     if (!material) {
-      // Verificação extra
       setSnackbar({
         open: true,
         message: "Material selecionado inválido.",
@@ -238,9 +215,7 @@ function OrdemDeServicoCreatePage({ token, onLogout }) {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  // --- Renderização (ajuste no loading) ---
   if (loading) {
-    // Mostra loading enquanto busca dados iniciais
     return (
       <Box
         sx={{
@@ -256,7 +231,6 @@ function OrdemDeServicoCreatePage({ token, onLogout }) {
     );
   }
 
-  // Se não estiver carregando, mas não houver clientes (provavelmente erro 401 não tratado ou API fora)
   if (
     !loading &&
     clientes.length === 0 &&
@@ -269,7 +243,7 @@ function OrdemDeServicoCreatePage({ token, onLogout }) {
           p: 3,
           m: 3,
           display: "flex",
-          flexDirection: "column", // Empilha os itens
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
           gap: 1,
@@ -290,7 +264,6 @@ function OrdemDeServicoCreatePage({ token, onLogout }) {
   }
 
   return (
-    // Seu JSX existente continua aqui...
     <Box component="form" onSubmit={handleSubmit} sx={{ pb: 4 }}>
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
         <ReceiptLongIcon fontSize="large" />

@@ -23,13 +23,11 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import InfoIcon from "@mui/icons-material/Info";
 
-// 1. Aceita 'token' e 'onLogout' como props
 function MateriaisPage({ token, onLogout }) {
   const [materiais, setMateriais] = useState([]);
   const [loading, setLoading] = useState(true);
   const theme = useTheme();
 
-  // Estados do formulário (sem mudanças)
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
   const [precoUnidade, setPrecoUnidade] = useState("");
@@ -37,25 +35,21 @@ function MateriaisPage({ token, onLogout }) {
   const [editingMaterial, setEditingMaterial] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
-  // Estado do Snackbar (sem mudanças)
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
 
-  // useEffect agora depende da prop 'token'
   useEffect(() => {
     const fetchMateriais = async () => {
-      // 2. Verifica a prop 'token'
       if (!token) {
         setLoading(false);
-        setMateriais([]); // Limpa materiais se não houver token
+        setMateriais([]);
         return;
       }
       setLoading(true);
       try {
-        // 3. Usa a prop 'token' na configuração
         const config = { headers: { Authorization: `Bearer ${token}` } };
         const response = await axios.get(
           "http://127.0.0.1:8000/api/materiais/",
@@ -65,7 +59,6 @@ function MateriaisPage({ token, onLogout }) {
       } catch (error) {
         console.error("Erro ao buscar materiais:", error);
         if (error.response && error.response.status === 401) {
-          // Só chama logout se a prop existir
           if (onLogout) onLogout();
         } else {
           setSnackbar({
@@ -80,12 +73,10 @@ function MateriaisPage({ token, onLogout }) {
     };
 
     fetchMateriais();
-    // 4. Adiciona 'token' às dependências
   }, [token, onLogout]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    // 5. Verifica a prop 'token'
     if (!token) {
       setSnackbar({
         open: true,
@@ -102,19 +93,17 @@ function MateriaisPage({ token, onLogout }) {
     };
 
     try {
-      // 6. Usa a prop 'token' na configuração
       const config = { headers: { Authorization: `Bearer ${token}` } };
 
-      let updatedMaterial = null; // Para atualizar o estado localmente
+      let updatedMaterial = null;
 
       if (editingMaterial) {
         const response = await axios.put(
-          // Guarda a resposta
           `http://127.0.0.1:8000/api/materiais/${editingMaterial.id}/`,
           materialData,
           config
         );
-        updatedMaterial = response.data; // Pega o material atualizado da resposta
+        updatedMaterial = response.data;
         setSnackbar({
           open: true,
           message: "Material atualizado com sucesso!",
@@ -122,12 +111,11 @@ function MateriaisPage({ token, onLogout }) {
         });
       } else {
         const response = await axios.post(
-          // Guarda a resposta
           "http://127.0.0.1:8000/api/materiais/",
           materialData,
           config
         );
-        updatedMaterial = response.data; // Pega o material novo da resposta
+        updatedMaterial = response.data;
         setSnackbar({
           open: true,
           message: "Material cadastrado com sucesso!",
@@ -135,7 +123,6 @@ function MateriaisPage({ token, onLogout }) {
         });
       }
 
-      // Atualiza o estado local para feedback imediato
       if (editingMaterial) {
         setMateriais(
           materiais.map((m) =>
@@ -146,7 +133,6 @@ function MateriaisPage({ token, onLogout }) {
         setMateriais([...materiais, updatedMaterial]);
       }
 
-      // fetchMateriais(); // Não é mais estritamente necessário, mas pode ser usado para garantir
       setIsFormOpen(false);
       clearForm();
     } catch (error) {
@@ -156,7 +142,6 @@ function MateriaisPage({ token, onLogout }) {
         message: "Erro ao salvar material.",
         severity: "error",
       });
-      // 7. Adiciona tratamento de 401
       if (error.response && error.response.status === 401) {
         if (onLogout) onLogout();
       }
@@ -164,7 +149,6 @@ function MateriaisPage({ token, onLogout }) {
   };
 
   const handleDeleteMaterial = async (materialId) => {
-    // 8. Verifica a prop 'token'
     if (!token) {
       setSnackbar({
         open: true,
@@ -173,10 +157,8 @@ function MateriaisPage({ token, onLogout }) {
       });
       return;
     }
-    // TODO: Substituir window.confirm por um Dialog/Modal
     if (window.confirm("Tem certeza que deseja deletar este material?")) {
       try {
-        // 9. Usa a prop 'token' na configuração
         const config = { headers: { Authorization: `Bearer ${token}` } };
         await axios.delete(
           `http://127.0.0.1:8000/api/materiais/${materialId}/`,
@@ -197,7 +179,6 @@ function MateriaisPage({ token, onLogout }) {
           message: "Erro ao deletar material.",
           severity: "error",
         });
-        // 10. Adiciona tratamento de 401
         if (error.response && error.response.status === 401) {
           if (onLogout) onLogout();
         }
@@ -205,7 +186,6 @@ function MateriaisPage({ token, onLogout }) {
     }
   };
 
-  // --- Funções handleEditClick, handleCancel, clearForm, handleCloseSnackbar (sem mudanças) ---
   const handleEditClick = (material) => {
     setEditingMaterial(material);
     setNome(material.nome);
@@ -213,7 +193,7 @@ function MateriaisPage({ token, onLogout }) {
     setPrecoUnidade(material.preco_unidade);
     setUnidadeMedida(material.unidade_medida || "un");
     setIsFormOpen(true);
-    window.scrollTo(0, 0); // Rola para o topo para ver o formulário
+    window.scrollTo(0, 0);
   };
 
   const handleCancel = () => {
@@ -236,9 +216,7 @@ function MateriaisPage({ token, onLogout }) {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  // --- Renderização (ajuste no loading) ---
   if (loading && materiais.length === 0) {
-    // Mostra loading só se não houver dados ainda
     return (
       <Box
         sx={{
@@ -254,7 +232,6 @@ function MateriaisPage({ token, onLogout }) {
   }
 
   return (
-    // Seu JSX existente continua aqui...
     <Box>
       <Box
         sx={{
@@ -294,13 +271,12 @@ function MateriaisPage({ token, onLogout }) {
             sx={{
               display: "grid",
               gap: 2,
-              // Layout do formulário ajustado
-              gridTemplateColumns: "1fr", // Mobile: 1 coluna
+              gridTemplateColumns: "1fr",
               [theme.breakpoints.up("sm")]: {
-                gridTemplateColumns: "repeat(2, 1fr)", // Tablet: 2 colunas
+                gridTemplateColumns: "repeat(2, 1fr)", 
               },
               [theme.breakpoints.up("md")]: {
-                gridTemplateColumns: "repeat(3, 1fr)", // Desktop: 3 colunas (nome, unid, preco)
+                gridTemplateColumns: "repeat(3, 1fr)",
               },
             }}
           >
@@ -309,11 +285,10 @@ function MateriaisPage({ token, onLogout }) {
               value={nome}
               onChange={(e) => setNome(e.target.value)}
               required
-              // Ocupa a linha inteira no mobile e tablet, mas só a primeira coluna no desktop
               sx={{
-                gridColumn: "1 / -1", // Default: Ocupa tudo
+                gridColumn: "1 / -1", 
                 [theme.breakpoints.up("md")]: {
-                  gridColumn: "1 / 2", // Desktop: Ocupa a primeira coluna
+                  gridColumn: "1 / 2",
                 },
               }}
             />
@@ -322,7 +297,6 @@ function MateriaisPage({ token, onLogout }) {
               value={unidadeMedida}
               onChange={(e) => setUnidadeMedida(e.target.value)}
               required
-              // No desktop, fica na segunda coluna
               sx={{
                 [theme.breakpoints.up("md")]: {
                   gridColumn: "2 / 3",
@@ -336,7 +310,6 @@ function MateriaisPage({ token, onLogout }) {
               onChange={(e) => setPrecoUnidade(e.target.value)}
               required
               inputProps={{ step: "0.01" }}
-              // No desktop, fica na terceira coluna
               sx={{
                 [theme.breakpoints.up("md")]: {
                   gridColumn: "3 / 4",
@@ -349,7 +322,6 @@ function MateriaisPage({ token, onLogout }) {
               onChange={(e) => setDescricao(e.target.value)}
               multiline
               rows={3}
-              // Ocupa a linha inteira em todos os tamanhos
               sx={{ gridColumn: "1 / -1" }}
             />
 
@@ -358,7 +330,7 @@ function MateriaisPage({ token, onLogout }) {
                 display: "flex",
                 gap: 1,
                 justifyContent: "flex-end",
-                gridColumn: "1 / -1", // Ocupa a linha inteira
+                gridColumn: "1 / -1",
               }}
             >
               <Button type="button" onClick={handleCancel} variant="outlined">

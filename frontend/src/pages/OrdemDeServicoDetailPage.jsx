@@ -1,5 +1,3 @@
-// src/pages/OrdemDeServicoDetailPage.jsx (VERSÃO MODERNA - CORRIGIDA COM PROP TOKEN)
-
 import { useState, useEffect, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -23,7 +21,6 @@ import {
   useTheme,
   Paper,
 } from "@mui/material";
-// ÍCONES
 import DeleteIcon from "@mui/icons-material/Delete";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
@@ -34,11 +31,9 @@ import PaymentIcon from "@mui/icons-material/Payment";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import InfoIcon from "@mui/icons-material/Info";
 
-// Componentes filhos
 import AddMaterialForm from "../components/AddMaterialForm";
 import AddPagamentoForm from "../components/AddPagamentoForm";
 
-// 1. Aceita 'token' e 'onLogout' como props
 function OrdemDeServicoDetailPage({ token, onLogout }) {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -46,16 +41,12 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
   const [ordem, setOrdem] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Estado do Snackbar (sem mudanças)
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
 
-  // --- FUNÇÕES DE LÓGICA ---
-
-  // useEffect agora depende da prop 'token'
   const fetchOrdemDetalhes = useCallback(async () => {
     if (!token) {
       setLoading(false);
@@ -84,16 +75,12 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
     } finally {
       setLoading(false);
     }
-    // 2. Adicione 'id', 'token' e 'onLogout' como dependências do useCallback
   }, [id, token, onLogout]);
 
-  // 3. O useEffect agora apenas chama a função
   useEffect(() => {
     fetchOrdemDetalhes();
-    // 4. A dependência do useEffect agora é a própria função
   }, [fetchOrdemDetalhes]);
 
-  // Funções de Status (sem mudanças)
   const getStatusColor = (status) => {
     switch (status) {
       case "AB":
@@ -128,7 +115,6 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
     }
   };
 
-  // Handler do Snackbar (sem mudanças)
   const handleCloseSnackbar = (event, reason) => {
     if (reason === "clickaway") {
       return;
@@ -137,7 +123,6 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
   };
 
   const handleDeleteMaterialUtilizado = async (itemId) => {
-    // 5. Verifica a prop 'token'
     if (!token) {
       setSnackbar({
         open: true,
@@ -146,10 +131,8 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
       });
       return;
     }
-    // TODO: Substituir window.confirm
     if (window.confirm("Tem certeza que deseja remover este material?")) {
       try {
-        // 6. Usa a prop 'token' na configuração
         const config = { headers: { Authorization: `Bearer ${token}` } };
         await axios.delete(
           `http://127.0.0.1:8000/api/materiais-utilizados/${itemId}/`,
@@ -160,8 +143,7 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
           message: "Material removido com sucesso!",
           severity: "success",
         });
-        // Chama fetchOrdemDetalhes para atualizar a lista e totais
-        fetchOrdemDetalhes(); // Rebusca os dados completos da OS
+        fetchOrdemDetalhes(); 
       } catch (error) {
         console.error("Erro ao remover material:", error);
         setSnackbar({
@@ -169,7 +151,6 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
           message: "Erro ao remover material.",
           severity: "error",
         });
-        // 7. Adiciona tratamento de 401
         if (error.response && error.response.status === 401) {
           if (onLogout) onLogout();
         }
@@ -178,7 +159,6 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
   };
 
   const handleDeletePagamento = async (pagamentoId) => {
-    // 8. Verifica a prop 'token'
     if (!token) {
       setSnackbar({
         open: true,
@@ -187,10 +167,8 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
       });
       return;
     }
-    // TODO: Substituir window.confirm
     if (window.confirm("Tem certeza que deseja remover este pagamento?")) {
       try {
-        // 9. Usa a prop 'token' na configuração
         const config = { headers: { Authorization: `Bearer ${token}` } };
         await axios.delete(
           `http://127.0.0.1:8000/api/pagamentos/${pagamentoId}/`,
@@ -201,8 +179,7 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
           message: "Pagamento removido com sucesso!",
           severity: "success",
         });
-        // Chama fetchOrdemDetalhes para atualizar a lista e totais
-        fetchOrdemDetalhes(); // Rebusca os dados completos da OS
+        fetchOrdemDetalhes(); 
       } catch (error) {
         console.error("Erro ao remover pagamento:", error);
         setSnackbar({
@@ -210,15 +187,12 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
           message: "Erro ao remover pagamento.",
           severity: "error",
         });
-        // 10. Adiciona tratamento de 401
         if (error.response && error.response.status === 401) {
           if (onLogout) onLogout();
         }
       }
     }
   };
-
-  // --- RENDERIZAÇÃO ---
 
   if (loading) {
     return (
@@ -239,9 +213,9 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
       <Paper
         sx={{
           p: 3,
-          m: 3, // Margem para não colar nas bordas
+          m: 3, 
           display: "flex",
-          flexDirection: "column", // Empilha os itens
+          flexDirection: "column", 
           alignItems: "center",
           justifyContent: "center",
           gap: 1,
@@ -262,7 +236,6 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
   }
 
   return (
-    // Seu JSX existente continua aqui...
     <Container maxWidth="lg" sx={{ my: 4 }}>
       <Box
         sx={{
@@ -293,7 +266,6 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
         />
       </Box>
 
-      {/* Card Info Gerais */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
@@ -358,7 +330,6 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
         </CardContent>
       </Card>
 
-      {/* Grid Serviços / Materiais */}
       <Box
         sx={{
           display: "grid",
@@ -408,7 +379,7 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
                         edge="end"
                         aria-label="delete"
                         onClick={() => handleDeleteMaterialUtilizado(m.id)}
-                        color="error" // Adiciona cor ao botão
+                        color="error"
                       >
                         <DeleteIcon />
                       </IconButton>
@@ -428,7 +399,6 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
         </Card>
       </Box>
 
-      {/* Card Pagamentos */}
       <Card sx={{ mb: 4 }}>
         <CardContent>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
@@ -446,7 +416,7 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
                       edge="end"
                       aria-label="delete"
                       onClick={() => handleDeletePagamento(p.id)}
-                      color="error" // Adiciona cor ao botão
+                      color="error"
                     >
                       <DeleteIcon />
                     </IconButton>
@@ -473,7 +443,6 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
         <Chip icon={<AddCircleOutlineIcon />} label="Adicionar Itens à OS" />
       </Divider>
 
-      {/* Grid Formulários de Ação */}
       <Box
         sx={{
           display: "grid",
@@ -485,20 +454,18 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
           <Typography variant="h6" gutterBottom>
             Adicionar Material
           </Typography>
-          {/* Passando a prop token para os forms filhos */}
           <AddMaterialForm
             token={token}
             ordemId={id}
             onSuccess={fetchOrdemDetalhes}
             onLogout={onLogout}
-            setSnackbar={setSnackbar} // <-- ADICIONE ESTA LINHA
+            setSnackbar={setSnackbar} 
           />
         </Paper>
         <Paper elevation={3} sx={{ p: 3 }}>
           <Typography variant="h6" gutterBottom>
             Registrar Pagamento
           </Typography>
-          {/* Passando a prop token para os forms filhos */}
           <AddPagamentoForm
             token={token}
             ordemId={id}

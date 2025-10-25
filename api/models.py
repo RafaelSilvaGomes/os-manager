@@ -61,15 +61,11 @@ class OrdemDeServico(models.Model):
     data_finalizacao = models.DateTimeField(null=True, blank=True)
     valor_total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
-    # --- NOVOS CAMPOS ADICIONADOS ---
-    # Para o endereço onde o serviço será de fato realizado
+
     endereco_servico = models.CharField(max_length=255, blank=True)
-    # Para a data que o serviço foi agendado (diferente da data que a OS foi criada)
     data_agendamento = models.DateTimeField(null=True, blank=True)
-    # --- FIM DOS NOVOS CAMPOS ---
 
     def calcular_e_salvar_total(self):
-        # Esta sua função já está perfeita!
         total_servicos = sum(servico.preco for servico in self.servicos.all())
 
         total_materiais = sum(
@@ -91,7 +87,7 @@ class Pagamento(models.Model):
         ('BOL', 'Boleto'),
     ]
 
-    # Relacionamento: Cada pagamento pertence a uma única OS
+
     ordem_de_servico = models.ForeignKey(OrdemDeServico, on_delete=models.CASCADE, related_name='pagamentos')
     
     valor_pago = models.DecimalField(max_digits=10, decimal_places=2)

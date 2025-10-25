@@ -1,4 +1,4 @@
-# api/urls.py
+
 from django.urls import path, include
 from .views import CreateUserView, ClienteViewSet, ServicoViewSet, OrdemDeServicoViewSet, MaterialViewSet, MaterialUtilizadoViewSet, PagamentoViewSet, RegisterView, DashboardStatsView
 from rest_framework.routers import DefaultRouter

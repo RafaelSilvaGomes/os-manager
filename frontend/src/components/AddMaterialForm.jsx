@@ -102,7 +102,7 @@ function AddMaterialForm({ token, ordemId, onSuccess, onLogout, setSnackbar }) {
   };
 
   return (
-    // 2. O novo return usando Grid para alinhar os itens
+
     <Box component="form" onSubmit={handleSubmit}>
       <Grid container spacing={2} alignItems="center">
         <Grid xs={12} sm={6}>

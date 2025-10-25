@@ -1,5 +1,3 @@
-// src/pages/ClientesPage.jsx (VERSÃO MODERNA - CORRIGIDA COM PROP TOKEN)
-
 import { useState, useEffect } from "react";
 import axios from "axios";
 import {
@@ -27,7 +25,6 @@ import AddIcon from "@mui/icons-material/Add";
 import PeopleIcon from "@mui/icons-material/People";
 import InfoIcon from "@mui/icons-material/Info";
 
-// Aceita 'token' e 'onLogout' como props
 function ClientesPage({ token, onLogout }) {
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -47,17 +44,14 @@ function ClientesPage({ token, onLogout }) {
     severity: "success",
   });
 
-  // fetchClientes agora usa a prop 'token' e depende dela no useEffect
   useEffect(() => {
     const fetchClientes = async () => {
-      // 1. Verifica a prop 'token' diretamente
       if (!token) {
         setLoading(false);
         return;
       }
-      setLoading(true); // Inicia o loading aqui
+      setLoading(true);
       try {
-        // 2. Usa a prop 'token' na configuração
         const config = { headers: { Authorization: `Bearer ${token}` } };
         const response = await axios.get(
           "http://127.0.0.1:8000/api/clientes/",
@@ -81,12 +75,10 @@ function ClientesPage({ token, onLogout }) {
     };
 
     fetchClientes();
-    // 3. Adiciona 'token' às dependências do useEffect
   }, [token, onLogout]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    // 4. Verifica a prop 'token' antes de tentar salvar
     if (!token) {
       setSnackbar({
         open: true,
@@ -105,7 +97,6 @@ function ClientesPage({ token, onLogout }) {
     };
 
     try {
-      // 5. Usa a prop 'token' na configuração (não precisa mais do sessionStorage.getItem)
       const config = { headers: { Authorization: `Bearer ${token}` } };
 
       if (editingClient) {
@@ -131,10 +122,6 @@ function ClientesPage({ token, onLogout }) {
           severity: "success",
         });
       }
-      // fetchClientes será chamado automaticamente pelo useEffect por causa da mudança no backend
-      // Mas podemos chamar manualmente se quisermos feedback imediato
-      // fetchClientes(); // <-- Isso pode causar um loop se o useEffect não estiver certo
-      // Atualiza a lista localmente para feedback mais rápido (opcional, mas bom UX)
       if (editingClient) {
         setClientes(
           clientes.map((c) =>
@@ -144,12 +131,6 @@ function ClientesPage({ token, onLogout }) {
           )
         );
       } else {
-        // Precisamos do ID retornado pela API para adicionar corretamente
-        // A melhor forma é realmente re-buscar com fetchClientes() após o POST
-        // Chamaremos fetchClientes dentro do useEffect dependendo do 'token'
-        // Para forçar a atualização, podemos invalidar o token temporariamente (não ideal)
-        // Ou simplesmente esperar o próximo ciclo de renderização
-        // Vamos re-adicionar fetchClientes() aqui por simplicidade por enquanto
         const response = await axios.get(
           "http://127.0.0.1:8000/api/clientes/",
           config
@@ -167,13 +148,12 @@ function ClientesPage({ token, onLogout }) {
         severity: "error",
       });
       if (error.response && error.response.status === 401) {
-        if (onLogout) onLogout(); // Desloga se o erro for 401
+        if (onLogout) onLogout();
       }
     }
   };
 
   const handleDeleteCliente = async (clienteId) => {
-    // 6. Verifica a prop 'token'
     if (!token) {
       setSnackbar({
         open: true,
@@ -184,7 +164,6 @@ function ClientesPage({ token, onLogout }) {
     }
     if (window.confirm("Tem certeza que deseja deletar este cliente?")) {
       try {
-        // 7. Usa a prop 'token' na configuração
         const config = { headers: { Authorization: `Bearer ${token}` } };
         await axios.delete(
           `http://127.0.0.1:8000/api/clientes/${clienteId}/`,
@@ -204,13 +183,12 @@ function ClientesPage({ token, onLogout }) {
           severity: "error",
         });
         if (error.response && error.response.status === 401) {
-          if (onLogout) onLogout(); // Desloga se o erro for 401
+          if (onLogout) onLogout();
         }
       }
     }
   };
 
-  // --- Funções handleEditClick, handleCancel, clearForm, handleCloseSnackbar (sem mudanças) ---
   const handleEditClick = (cliente) => {
     setEditingClient(cliente);
     setNome(cliente.nome);
@@ -220,7 +198,7 @@ function ClientesPage({ token, onLogout }) {
     setPontoReferencia(cliente.ponto_referencia || "");
     setObservacoes(cliente.observacoes || "");
     setIsFormOpen(true);
-    window.scrollTo(0, 0); // Rola para o topo para ver o form
+    window.scrollTo(0, 0);
   };
 
   const handleCancel = () => {
@@ -245,9 +223,7 @@ function ClientesPage({ token, onLogout }) {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  // --- Renderização (sem mudanças na estrutura JSX) ---
   if (loading && clientes.length === 0) {
-    // Mostra loading só se não houver dados ainda
     return (
       <Box
         sx={{
@@ -263,7 +239,6 @@ function ClientesPage({ token, onLogout }) {
   }
 
   return (
-    // Seu JSX existente continua aqui...
     <Box>
       <Box
         sx={{

@@ -82,18 +82,16 @@ class PagamentoSerializer(serializers.ModelSerializer):
             "forma_pagamento",
             "data_pagamento",
         ]
-        # O campo 'data_pagamento' será preenchido automaticamente, então é apenas leitura
         read_only_fields = ["data_pagamento"]
 
 
 class OrdemDeServicoSerializer(serializers.ModelSerializer):
-    # Campos Aninhados (para leitura/exibição)
     cliente = ClienteSerializer(read_only=True)
     servicos = ServicoSerializer(many=True, read_only=True)
     materiais_utilizados = MaterialUtilizadoSerializer(many=True, read_only=True)
     pagamentos = PagamentoSerializer(many=True, read_only=True)
 
-    # Campos para Escrita (receber IDs na criação/edição)
+
     cliente_id = serializers.PrimaryKeyRelatedField(
         queryset=Cliente.objects.all(), write_only=True, source='cliente', label="Cliente"
     )
@@ -102,7 +100,7 @@ class OrdemDeServicoSerializer(serializers.ModelSerializer):
         write_only=True, source='servicos', label="Serviços (IDs)"
     )
 
-    # --- CAMPOS CALCULADOS ---
+
     valor_servicos = serializers.SerializerMethodField()
     valor_materiais = serializers.SerializerMethodField()
     valor_total = serializers.SerializerMethodField()
@@ -113,26 +111,26 @@ class OrdemDeServicoSerializer(serializers.ModelSerializer):
         model = OrdemDeServico
         fields = [
             "id",
-            "cliente", # Leitura
-            "cliente_id", # Escrita
-            "servicos", # Leitura
-            "servicos_ids", # Escrita
-            "materiais_utilizados", # Leitura
-            "pagamentos", # Leitura
+            "cliente", 
+            "cliente_id", 
+            "servicos", 
+            "servicos_ids", 
+            "materiais_utilizados", 
+            "pagamentos", 
             "status",
             "data_abertura",
             "data_agendamento",
             "data_finalizacao",
             "endereco_servico",
 
-            # Incluir os campos calculados
+
             "valor_servicos",
             "valor_materiais",
             "valor_total",
             "valor_pago",
             "valor_pendente",
         ]
-        # Campos que o frontend não deve enviar
+
         read_only_fields = [
             "data_abertura",
             "data_finalizacao",
@@ -147,34 +145,34 @@ class OrdemDeServicoSerializer(serializers.ModelSerializer):
             "pagamentos",
         ]
 
-    # --- MÉTODOS DE CÁLCULO INTERNOS ---
+
     def get_valor_servicos(self, obj):
-        # Soma os preços dos serviços associados
+  
         total = obj.servicos.aggregate(total=Sum('preco'))['total'] or Decimal('0.00')
         return total.quantize(Decimal('0.01'))
 
     def get_valor_materiais(self, obj):
-        # Soma o custo dos materiais utilizados
+
         total = Decimal('0.00')
-        # Para otimizar, a ViewSet que usa este serializer pode usar prefetch_related('materiais_utilizados__material')
+
         for mu in obj.materiais_utilizados.all():
-            if mu.material: # Verifica se o material ainda existe
+            if mu.material: 
                total += mu.quantidade * mu.material.preco_unidade
         return total.quantize(Decimal('0.01'))
 
     def get_valor_total(self, obj):
-        # Reutiliza os métodos acima para calcular o total
+  
         valor_servicos = self.get_valor_servicos(obj)
         valor_materiais = self.get_valor_materiais(obj)
         return (valor_servicos + valor_materiais).quantize(Decimal('0.01'))
 
     def get_valor_pago(self, obj):
-        # Soma os pagamentos associados
+
         total = obj.pagamentos.aggregate(total=Sum('valor_pago'))['total'] or Decimal('0.00')
         return total.quantize(Decimal('0.01'))
 
     def get_valor_pendente(self, obj):
-        # Calcula Total - Pago, reutilizando os métodos
+  
         valor_total = self.get_valor_total(obj)
         valor_pago = self.get_valor_pago(obj)
         return (valor_total - valor_pago).quantize(Decimal('0.01'))
