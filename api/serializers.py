@@ -75,6 +75,7 @@ class MaterialUtilizadoWriteSerializer(serializers.Serializer):
     quantidade = serializers.IntegerField()
     
 class PagamentoSerializer(serializers.ModelSerializer):
+    forma_pagamento_display = serializers.CharField(source='get_forma_pagamento_display', read_only=True)
     class Meta:
         model = Pagamento
         fields = [
@@ -82,17 +83,20 @@ class PagamentoSerializer(serializers.ModelSerializer):
             "ordem_de_servico",
             "valor_pago",
             "forma_pagamento",
+            "forma_pagamento_display",
             "data_pagamento",
         ]
         read_only_fields = ["data_pagamento"]
 
-
+class MaterialParaAdicionarSerializer(serializers.Serializer):
+    material_id = serializers.IntegerField(write_only=True)
+    quantidade = serializers.IntegerField(min_value=1, write_only=True)
+    
 class OrdemDeServicoSerializer(serializers.ModelSerializer):
     cliente = ClienteSerializer(read_only=True)
     servicos = ServicoSerializer(many=True, read_only=True)
-    materiais_utilizados = MaterialUtilizadoSerializer(many=True, required=False)
+    materiais_utilizados = MaterialUtilizadoSerializer(many=True, read_only=True) 
     pagamentos = PagamentoSerializer(many=True, read_only=True)
-
 
     cliente_id = serializers.PrimaryKeyRelatedField(
         queryset=Cliente.objects.all(), write_only=True, source='cliente', label="Cliente"
@@ -102,6 +106,11 @@ class OrdemDeServicoSerializer(serializers.ModelSerializer):
         write_only=True, label="Serviços (IDs)"
     )
 
+    materiais_para_adicionar = MaterialParaAdicionarSerializer(
+        many=True,
+        write_only=True,
+        required=False
+    )
 
     valor_servicos = serializers.SerializerMethodField()
     valor_materiais = serializers.SerializerMethodField()
@@ -112,94 +121,72 @@ class OrdemDeServicoSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrdemDeServico
         fields = [
-            "id",
-            "cliente", 
-            "cliente_id", 
-            "servicos", 
-            "servicos_ids", 
-            "materiais_utilizados", 
-            "pagamentos", 
-            "status",
-            "data_abertura",
-            "data_agendamento",
-            "data_finalizacao",
-            "endereco_servico",
-
-
-            "valor_servicos",
-            "valor_materiais",
-            "valor_total",
-            "valor_pago",
-            "valor_pendente",
+            "id", "cliente", "cliente_id", "servicos", "servicos_ids",
+            "materiais_utilizados",
+            "pagamentos", "status", "data_abertura", "data_agendamento",
+            "data_finalizacao", "endereco_servico", "valor_servicos",
+            "valor_materiais", "valor_total", "valor_pago", "valor_pendente",
+            "materiais_para_adicionar"
         ]
-
         read_only_fields = [
-            "data_abertura",
-            "data_finalizacao",
-            "valor_servicos",
-            "valor_materiais",
-            "valor_total",
-            "valor_pago",
-            "valor_pendente",
-            "cliente",
-            "pagamentos",
+            "data_abertura", "data_finalizacao", "valor_servicos",
+            "valor_materiais", "valor_total", "valor_pago", "valor_pendente",
+            "cliente", "pagamentos", "materiais_utilizados"
         ]
-
 
     def get_valor_servicos(self, obj):
-  
         total = obj.servicos.aggregate(total=Sum('preco'))['total'] or Decimal('0.00')
         return total.quantize(Decimal('0.01'))
 
     def get_valor_materiais(self, obj):
-
         total = Decimal('0.00')
-
-        for mu in obj.materiais_utilizados.all():
-            if mu.material: 
-               total += mu.quantidade * mu.material.preco_unidade
+        for mu in obj.materiais_utilizados.all().select_related('material'):
+            if mu.material:
+                total += mu.quantidade * mu.material.preco_unidade
         return total.quantize(Decimal('0.01'))
 
     def get_valor_total(self, obj):
-  
         valor_servicos = self.get_valor_servicos(obj)
         valor_materiais = self.get_valor_materiais(obj)
         return (valor_servicos + valor_materiais).quantize(Decimal('0.01'))
 
     def get_valor_pago(self, obj):
-
         total = obj.pagamentos.aggregate(total=Sum('valor_pago'))['total'] or Decimal('0.00')
         return total.quantize(Decimal('0.01'))
 
     def get_valor_pendente(self, obj):
-  
         valor_total = self.get_valor_total(obj)
         valor_pago = self.get_valor_pago(obj)
         return (valor_total - valor_pago).quantize(Decimal('0.01'))
+
     def create(self, validated_data):
-        
         with transaction.atomic():
-            servicos_data = validated_data.pop('servicos_ids', []) 
-            materiais_data = validated_data.pop('materiais_utilizados', [])  
+            servicos_data = validated_data.pop('servicos_ids', [])
+            materiais_para_adicionar_data = validated_data.pop('materiais_para_adicionar', [])
+
             if 'request' in self.context:
-                 validated_data['profissional'] = self.context['request'].user  
+                validated_data['profissional'] = self.context['request'].user
+            else:
+                 raise serializers.ValidationError("Contexto da requisição não encontrado.")
+
             ordem_de_servico = OrdemDeServico.objects.create(**validated_data)
+
             if servicos_data:
                 ordem_de_servico.servicos.set(servicos_data)
 
-            
-            for material_item_data in materiais_data:
-                
-                material_obj = material_item_data.get('material') 
-                quantidade = material_item_data.get('quantidade')
-                if material_obj and quantidade:
-                    MaterialUtilizado.objects.create(
-                        ordem_de_servico=ordem_de_servico, 
-                        material=material_obj, 
-                        quantidade=quantidade
+            materiais_utilizados_criados = []
+            for material_item in materiais_para_adicionar_data:
+                try:
+                    mu = MaterialUtilizado.objects.create(
+                        ordem_de_servico=ordem_de_servico,
+                        material_id=material_item['material_id'], 
+                        quantidade=material_item['quantidade']
                     )
-            ordem_de_servico.refresh_from_db() 
-            ordem_de_servico.calcular_e_salvar_total()
+                    materiais_utilizados_criados.append(mu)
+                except Exception as e:
+                    print(f"Erro ao criar MaterialUtilizado: {e}")
+
+            ordem_de_servico.calcular_e_salvar_total() 
 
             return ordem_de_servico
     def update(self, instance, validated_data):

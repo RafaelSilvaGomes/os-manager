@@ -309,6 +309,8 @@ function OrdemDeServicoCreatePage({ token, onLogout }) {
             value={dataAgendamento}
             onChange={(newValue) => setDataAgendamento(newValue)}
             renderInput={(params) => <TextField {...params} fullWidth />}
+            ampm={false}
+            format="DD/MM/YYYY HH:mm"
           />
 
           <TextField

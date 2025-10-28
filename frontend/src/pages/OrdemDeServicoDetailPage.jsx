@@ -88,9 +88,9 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
       case "EA":
         return "warning";
       case "FN":
-        return "success";
+        return "warning";
       case "PG":
-        return "secondary";
+        return "success";
       case "CA":
         return "error";
       default:
@@ -105,7 +105,7 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
       case "EA":
         return "Em Andamento";
       case "FN":
-        return "Finalizada";
+        return "Finalizada (Pendente)";
       case "PG":
         return "Paga";
       case "CA":
@@ -143,7 +143,7 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
           message: "Material removido com sucesso!",
           severity: "success",
         });
-        fetchOrdemDetalhes(); 
+        fetchOrdemDetalhes();
       } catch (error) {
         console.error("Erro ao remover material:", error);
         setSnackbar({
@@ -179,7 +179,7 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
           message: "Pagamento removido com sucesso!",
           severity: "success",
         });
-        fetchOrdemDetalhes(); 
+        fetchOrdemDetalhes();
       } catch (error) {
         console.error("Erro ao remover pagamento:", error);
         setSnackbar({
@@ -213,9 +213,9 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
       <Paper
         sx={{
           p: 3,
-          m: 3, 
+          m: 3,
           display: "flex",
-          flexDirection: "column", 
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
           gap: 1,
@@ -459,7 +459,7 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
             ordemId={id}
             onSuccess={fetchOrdemDetalhes}
             onLogout={onLogout}
-            setSnackbar={setSnackbar} 
+            setSnackbar={setSnackbar}
           />
         </Paper>
         <Paper elevation={3} sx={{ p: 3 }}>

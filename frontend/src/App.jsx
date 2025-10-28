@@ -1,10 +1,7 @@
-
-
 import { useState, useEffect, useMemo } from "react";
 import { BrowserRouter, Routes, Route, Navigate, Link } from "react-router-dom";
 import "./App.css";
 import ProtectedRoute from "./components/ProtectedRoute";
-
 
 import {
   ThemeProvider,
@@ -184,25 +181,16 @@ function App() {
   };
 
   const handleLogin = (accessToken) => {
-    
-    console.log("handleLogin: Token recebido =", accessToken);
-
-    
     try {
-      console.log("handleLogin: Tentando salvar no localStorage..."); 
-      localStorage.setItem('accessToken', accessToken);
-      console.log("handleLogin: Salvo no localStorage com sucesso."); 
+      localStorage.setItem("accessToken", accessToken);
+      const savedToken = localStorage.getItem("accessToken");
 
-      
-      const savedToken = localStorage.getItem('accessToken');
-      console.log("handleLogin: Token LIDO IMEDIATAMENTE do localStorage =", savedToken); 
-
-      
       setToken(accessToken);
-
     } catch (e) {
-      console.error("ERRO GRAVE AO SALVAR NO LOCALSTORAGE:", e); 
-      alert("Ocorreu um erro ao salvar sua sessão. Tente limpar o cache do navegador.");
+      console.error("ERRO GRAVE AO SALVAR NO LOCALSTORAGE:", e);
+      alert(
+        "Ocorreu um erro ao salvar sua sessão. Tente limpar o cache do navegador."
+      );
     }
   };
 
@@ -229,7 +217,6 @@ function App() {
                   <Typography
                     variant="h6"
                     component="div"
-                    
                     sx={{
                       mr: 2,
                       display: "flex",
@@ -251,7 +238,7 @@ function App() {
                       flexGrow: 1,
                       display: "flex",
                       gap: 1,
-                      justifyContent: "center", 
+                      justifyContent: "center",
                     }}
                   >
                     <Button
@@ -543,7 +530,13 @@ function App() {
                   />
                   <Route
                     path="/"
-                    element={token ? <DashboardPage token={token} onLogout={handleLogout} /> : <Navigate to="/login" />}
+                    element={
+                      token ? (
+                        <DashboardPage token={token} onLogout={handleLogout} />
+                      ) : (
+                        <Navigate to="/login" />
+                      )
+                    }
                   />
                 </Route>
               </Routes>

@@ -39,7 +39,7 @@ function OrdensDeServicoPage({ token, onLogout }) {
     const fetchOrdens = async () => {
       if (!token) {
         setLoading(false);
-        setOrdens([]); 
+        setOrdens([]);
         return;
       }
       setLoading(true);
@@ -75,15 +75,16 @@ function OrdensDeServicoPage({ token, onLogout }) {
       case "EA":
         return "warning";
       case "FN":
-        return "success";
+        return "warning";
       case "PG":
-        return "secondary";
+        return "success";
       case "CA":
         return "error";
       default:
         return "default";
     }
   };
+
   const getStatusLabel = (status) => {
     switch (status) {
       case "AB":
@@ -91,7 +92,7 @@ function OrdensDeServicoPage({ token, onLogout }) {
       case "EA":
         return "Em Andamento";
       case "FN":
-        return "Finalizada";
+        return "Finalizada (Pendente)";
       case "PG":
         return "Paga";
       case "CA":
