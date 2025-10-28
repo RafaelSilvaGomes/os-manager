@@ -65,12 +65,12 @@ function DashboardPage({ token, onLogout }) {
 
   const displayStats = {
     totalClientes: stats?.total_clientes || 0,
-    totalServicos: 0,
+    totalServicos: stats?.total_servicos || 0,
     ordensAtivas: stats?.ordens_abertas || 0,
     receitaMes: stats?.faturamento_mes || "0.00",
     ordensAbertasDetalhe: stats?.ordens_abertas || 0,
-    ordensEmAndamentoDetalhe: 0, 
-    ordensConcluidasDetalhe: 0, 
+    ordensEmAndamentoDetalhe: stats?.ordens_em_andamento || 0, 
+    ordensConcluidasDetalhe: stats?.ordens_concluidas ||0, 
     receitaTotal: "0.00", 
     ticketMedio: "0.00",
   };

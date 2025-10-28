@@ -1,4 +1,4 @@
-# api/serializers.py
+
 from django.contrib.auth.models import User
 from .models import (
     Cliente,
@@ -9,14 +9,15 @@ from .models import (
     Pagamento,
 )
 from rest_framework import serializers, validators
-from django.db.models import Sum # Importe Sum e Decimal
+from django.db.models import Sum 
 from decimal import Decimal
+from django.db import transaction
 
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        # Adicionamos os novos campos aqui
+        
         fields = ["id", "username", "password", "email", "first_name", "last_name"]
         extra_kwargs = {"password": {"write_only": True}}
 
@@ -67,6 +68,7 @@ class MaterialUtilizadoSerializer(serializers.ModelSerializer):
             "material_id",
             "quantidade",
         ]
+        read_only_fields = ["ordem_de_servico"]
 
 class MaterialUtilizadoWriteSerializer(serializers.Serializer):
     material_id = serializers.IntegerField()
@@ -88,7 +90,7 @@ class PagamentoSerializer(serializers.ModelSerializer):
 class OrdemDeServicoSerializer(serializers.ModelSerializer):
     cliente = ClienteSerializer(read_only=True)
     servicos = ServicoSerializer(many=True, read_only=True)
-    materiais_utilizados = MaterialUtilizadoSerializer(many=True, read_only=True)
+    materiais_utilizados = MaterialUtilizadoSerializer(many=True, required=False)
     pagamentos = PagamentoSerializer(many=True, read_only=True)
 
 
@@ -97,7 +99,7 @@ class OrdemDeServicoSerializer(serializers.ModelSerializer):
     )
     servicos_ids = serializers.ListField(
         child=serializers.PrimaryKeyRelatedField(queryset=Servico.objects.all()),
-        write_only=True, source='servicos', label="Serviços (IDs)"
+        write_only=True, label="Serviços (IDs)"
     )
 
 
@@ -140,8 +142,6 @@ class OrdemDeServicoSerializer(serializers.ModelSerializer):
             "valor_pago",
             "valor_pendente",
             "cliente",
-            "servicos",
-            "materiais_utilizados",
             "pagamentos",
         ]
 
@@ -176,7 +176,51 @@ class OrdemDeServicoSerializer(serializers.ModelSerializer):
         valor_total = self.get_valor_total(obj)
         valor_pago = self.get_valor_pago(obj)
         return (valor_total - valor_pago).quantize(Decimal('0.01'))
+    def create(self, validated_data):
+        
+        with transaction.atomic():
+            servicos_data = validated_data.pop('servicos_ids', []) 
+            materiais_data = validated_data.pop('materiais_utilizados', [])  
+            if 'request' in self.context:
+                 validated_data['profissional'] = self.context['request'].user  
+            ordem_de_servico = OrdemDeServico.objects.create(**validated_data)
+            if servicos_data:
+                ordem_de_servico.servicos.set(servicos_data)
 
+            
+            for material_item_data in materiais_data:
+                
+                material_obj = material_item_data.get('material') 
+                quantidade = material_item_data.get('quantidade')
+                if material_obj and quantidade:
+                    MaterialUtilizado.objects.create(
+                        ordem_de_servico=ordem_de_servico, 
+                        material=material_obj, 
+                        quantidade=quantidade
+                    )
+            ordem_de_servico.refresh_from_db() 
+            ordem_de_servico.calcular_e_salvar_total()
+
+            return ordem_de_servico
+    def update(self, instance, validated_data):
+        with transaction.atomic():
+            
+            servicos_data = validated_data.pop('servicos', None)
+            if servicos_data is not None:
+                instance.servicos.set(servicos_data)
+
+            materiais_data = validated_data.pop('materiais_utilizados', None)
+            if materiais_data is not None:
+                instance.materiais_utilizados.all().delete() 
+                for material_item_data in materiais_data:
+                    MaterialUtilizado.objects.create(ordem_de_servico=instance, **material_item_data)
+
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
+            instance.calcular_e_salvar_total()
+
+            return instance
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User

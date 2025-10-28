@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from .models import Cliente, Servico, OrdemDeServico, Material, MaterialUtilizado, Pagamento
 from rest_framework.views import APIView
 from django.utils import timezone
-from django.db.models import Sum, Value, F
+from django.db.models import Sum, Value, F, Count
 from django.db.models.functions import Coalesce
 from decimal import Decimal
 from django.utils import timezone
@@ -131,32 +131,56 @@ class DashboardStatsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-
         profissional = request.user
 
+        qs_ordens = OrdemDeServico.objects.filter(profissional=profissional)
 
-        ordens_abertas = OrdemDeServico.objects.filter(profissional=profissional, status='AB').count()
-        
+        contagens_status = qs_ordens.values('status').annotate(count=Count('id'))
+        status_map = {item['status']: item['count'] for item in contagens_status}
 
+        ordens_abertas = status_map.get('AB', 0)
+        ordens_em_andamento = status_map.get('EA', 0)
+        ordens_finalizadas = status_map.get('FN', 0)
+        ordens_pagas = status_map.get('PG', 0)
+        ordens_canceladas = status_map.get('CA', 0)
+        ordens_concluidas = ordens_finalizadas + ordens_pagas
+
+ 
         total_clientes = Cliente.objects.filter(profissional=profissional).count()
-
+        total_servicos = Servico.objects.filter(profissional=profissional).count()
 
         hoje = timezone.now()
-        faturamento_mes = OrdemDeServico.objects.filter(
-            profissional=profissional,
-            status='PG', 
+        faturamento_mes = qs_ordens.filter(
+            status='PG',
             data_finalizacao__year=hoje.year,
             data_finalizacao__month=hoje.month
         ).aggregate(
+            total=Coalesce(Sum('valor_total'), Value(Decimal('0.00')))
+        )['total']
 
+        receita_total = qs_ordens.filter(
+            status='PG'
+        ).aggregate(
             total=Coalesce(Sum('valor_total'), Value(Decimal('0.00')))
         )['total']
 
  
+        total_os_pagas = ordens_pagas 
+        ticket_medio = (receita_total / total_os_pagas).quantize(Decimal('0.01')) if total_os_pagas > 0 else Decimal('0.00')
+
         data = {
             'ordens_abertas': ordens_abertas,
+            'ordens_em_andamento': ordens_em_andamento,
+            'ordens_concluidas': ordens_concluidas,     
+            'ordens_pagas': ordens_pagas,               
+            'ordens_canceladas': ordens_canceladas,     
+
             'total_clientes': total_clientes,
-            'faturamento_mes': faturamento_mes
+            'total_servicos': total_servicos,          
+
+            'faturamento_mes': faturamento_mes,
+            'receita_total': receita_total,             
+            'ticket_medio': ticket_medio,              
         }
-        
+
         return Response(data)
