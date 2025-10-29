@@ -176,16 +176,23 @@ function ClientesPage({ token, onLogout }) {
           severity: "success",
         });
       } catch (error) {
-        console.error("Erro ao deletar cliente:", error);
-        setSnackbar({
-          open: true,
-          message: "Erro ao deletar cliente.",
-          severity: "error",
-        });
-        if (error.response && error.response.status === 401) {
-          if (onLogout) onLogout();
-        }
+      console.error("Erro ao deletar cliente:", error);
+      let errorMessage = "Erro ao deletar cliente.";
+      
+      if (error.response && error.response.data && error.response.data.detail) {
+         errorMessage = error.response.data.detail;
       }
+      
+      setSnackbar({
+        open: true,
+        message: errorMessage,
+        severity: "error",
+      });
+      
+      if (error.response && error.response.status === 401) {
+        if (onLogout) onLogout();
+      }
+    }
     }
   };
 

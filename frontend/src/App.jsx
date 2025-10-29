@@ -105,7 +105,7 @@ const professionPalettes = {
 };
 
 function App() {
-  const [token, setToken] = useState(null);
+  const [token, setToken] = useState(() => sessionStorage.getItem("accessToken") || null);
 
   const [themeMode, setThemeMode] = useState(
     () => localStorage.getItem("themeMode") || "light"
@@ -151,13 +151,6 @@ function App() {
   }, [themeMode, profession, token]);
 
   useEffect(() => {
-    const storedToken = sessionStorage.getItem("accessToken");
-    if (storedToken) {
-      setToken(storedToken);
-    }
-  }, []);
-
-  useEffect(() => {
     document.body.className = themeMode;
   }, [themeMode]);
 
@@ -183,12 +176,10 @@ function App() {
 
   const handleLogin = (accessToken) => {
     try {
-      localStorage.setItem("accessToken", accessToken);
-      const savedToken = localStorage.getItem("accessToken");
-
+      sessionStorage.setItem("accessToken", accessToken); // MUDANÇA AQUI
       setToken(accessToken);
     } catch (e) {
-      console.error("ERRO GRAVE AO SALVAR NO LOCALSTORAGE:", e);
+      console.error("ERRO GRAVE AO SALVAR NO SESSIONSTORAGE:", e); // MUDANÇA AQUI
       alert(
         "Ocorreu um erro ao salvar sua sessão. Tente limpar o cache do navegador."
       );
@@ -198,6 +189,7 @@ function App() {
   const handleLogout = () => {
     setToken(null);
     sessionStorage.removeItem("accessToken");
+    localStorage.removeItem("accessToken");
   };
 
   return (

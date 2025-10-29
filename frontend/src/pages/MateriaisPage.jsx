@@ -1,4 +1,4 @@
-// src/pages/MateriaisPage.jsx (VERSÃO MODERNA - CORRIGIDA COM PROP TOKEN)
+// src/pages/MateriaisPage.jsx
 
 import { useState, useEffect } from "react";
 import axios from "axios";
@@ -16,6 +16,12 @@ import {
   Alert,
   useTheme,
   IconButton,
+  // --- NOVOS IMPORTS ---
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
@@ -34,6 +40,10 @@ function MateriaisPage({ token, onLogout }) {
   const [unidadeMedida, setUnidadeMedida] = useState("un");
   const [editingMaterial, setEditingMaterial] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+
+  // --- NOVOS ESTADOS PARA O DIALOG DE CONFIRMAÇÃO ---
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [materialToDelete, setMaterialToDelete] = useState(null);
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -137,54 +147,104 @@ function MateriaisPage({ token, onLogout }) {
       clearForm();
     } catch (error) {
       console.error("Erro ao salvar material:", error.response?.data || error);
+
+      // --- 💡 INÍCIO DA ALTERAÇÃO (MENSAGEM DE ERRO) ---
+      let errorMessage = "Erro ao salvar material.";
+      if (error.response && error.response.data) {
+        const errorData = error.response.data;
+        try {
+          // Tenta pegar erros de validação (ex: "nome": "Este campo é obrigatório")
+          const firstKey = Object.keys(errorData)[0];
+          errorMessage = `${firstKey}: ${errorData[firstKey][0]}`;
+        } catch (e) {
+          /* Usa a mensagem padrão */
+        }
+      }
+
       setSnackbar({
         open: true,
-        message: "Erro ao salvar material.",
+        message: errorMessage,
         severity: "error",
       });
+      // --- FIM DA ALTERAÇÃO ---
+
       if (error.response && error.response.status === 401) {
         if (onLogout) onLogout();
       }
     }
   };
 
-  const handleDeleteMaterial = async (materialId) => {
+  // --- ALTERADO ---
+  // Esta função agora APENAS ABRE o Dialog de confirmação
+  const handleDeleteMaterial = (materialId) => {
+    const material = materiais.find((m) => m.id === materialId);
+    if (material) {
+      setMaterialToDelete(material);
+      setIsConfirmDialogOpen(true);
+    }
+  };
+
+  // --- NOVA FUNÇÃO ---
+  // Esta função fecha o Dialog
+  const handleCloseConfirmDialog = () => {
+    setIsConfirmDialogOpen(false);
+    setTimeout(() => setMaterialToDelete(null), 150);
+  };
+
+  // --- NOVA FUNÇÃO (COM LÓGICA MOVIDA DO DELETE ANTIGO) ---
+  const handleConfirmDelete = async () => {
+    if (!materialToDelete) return;
+
+    const materialId = materialToDelete.id;
+    handleCloseConfirmDialog(); // Fecha o dialog
+
     if (!token) {
       setSnackbar({
         open: true,
-        message: "Erro de autenticação. Tente logar novamente.",
+        message: "Erro de autenticação.",
         severity: "error",
       });
       return;
     }
-    if (window.confirm("Tem certeza que deseja deletar este material?")) {
-      try {
-        const config = { headers: { Authorization: `Bearer ${token}` } };
-        await axios.delete(
-          `http://127.0.0.1:8000/api/materiais/${materialId}/`,
-          config
-        );
-        setMateriais(
-          materiais.filter((material) => material.id !== materialId)
-        );
-        setSnackbar({
-          open: true,
-          message: "Material deletado com sucesso!",
-          severity: "success",
-        });
-      } catch (error) {
-        console.error("Erro ao deletar material:", error);
-        setSnackbar({
-          open: true,
-          message: "Erro ao deletar material.",
-          severity: "error",
-        });
-        if (error.response && error.response.status === 401) {
-          if (onLogout) onLogout();
-        }
+
+    try {
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      await axios.delete(
+        `http://127.0.0.1:8000/api/materiais/${materialId}/`,
+        config
+      );
+      setMateriais(
+        materiais.filter((material) => material.id !== materialId)
+      );
+      setSnackbar({
+        open: true,
+        message: "Material deletado com sucesso!",
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Erro ao deletar material:", error);
+
+      // --- 💡 INÍCIO DA ALTERAÇÃO (MENSAGEM DE ERRO) ---
+      let errorMessage = "Erro ao deletar material.";
+      // Pega a mensagem de "detail" que o Django envia (Erro 400)
+      if (error.response && error.response.data && error.response.data.detail) {
+        errorMessage = error.response.data.detail;
+      }
+
+      setSnackbar({
+        open: true,
+        message: errorMessage,
+        severity: "error",
+      });
+      // --- FIM DA ALTERAÇÃO ---
+
+      if (error.response && error.response.status === 401) {
+        if (onLogout) onLogout();
       }
     }
   };
+  
+  // --- (O restante das suas funções handleEditClick, handleCancel, etc. continuam iguais) ---
 
   const handleEditClick = (material) => {
     setEditingMaterial(material);
@@ -233,6 +293,7 @@ function MateriaisPage({ token, onLogout }) {
 
   return (
     <Box>
+      {/* ... (Todo o seu JSX do topo da página e formulário - sem mudanças) ... */}
       <Box
         sx={{
           display: "flex",
@@ -273,7 +334,7 @@ function MateriaisPage({ token, onLogout }) {
               gap: 2,
               gridTemplateColumns: "1fr",
               [theme.breakpoints.up("sm")]: {
-                gridTemplateColumns: "repeat(2, 1fr)", 
+                gridTemplateColumns: "repeat(2, 1fr)",
               },
               [theme.breakpoints.up("md")]: {
                 gridTemplateColumns: "repeat(3, 1fr)",
@@ -286,7 +347,7 @@ function MateriaisPage({ token, onLogout }) {
               onChange={(e) => setNome(e.target.value)}
               required
               sx={{
-                gridColumn: "1 / -1", 
+                gridColumn: "1 / -1",
                 [theme.breakpoints.up("md")]: {
                   gridColumn: "1 / 2",
                 },
@@ -382,12 +443,14 @@ function MateriaisPage({ token, onLogout }) {
                   <IconButton
                     size="small"
                     color="error"
+                    // --- ALTERADO ---
+                    // Remove o window.confirm e chama a função que abre o dialog
                     onClick={() => handleDeleteMaterial(material.id)}
                   >
                     <DeleteIcon fontSize="small" />
                   </IconButton>
                 </Box>
-
+                {/* ... (Resto do CardContent) ... */}
                 <Typography
                   variant="h6"
                   sx={{
@@ -444,6 +507,7 @@ function MateriaisPage({ token, onLogout }) {
         )}
       </Box>
 
+      {/* O Snackbar já estava aqui e correto */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
@@ -458,6 +522,31 @@ function MateriaisPage({ token, onLogout }) {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* --- NOVO: JSX DO DIALOG DE CONFIRMAÇÃO --- */}
+      <Dialog
+        open={isConfirmDialogOpen}
+        onClose={handleCloseConfirmDialog}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">Confirmar Exclusão</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            Tem certeza que deseja deletar o material{" "}
+            <strong>{materialToDelete?.nome}</strong>? Esta ação não pode ser
+            desfeita.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseConfirmDialog} color="inherit">
+            Cancelar
+          </Button>
+          <Button onClick={handleConfirmDelete} color="error" autoFocus>
+            Deletar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

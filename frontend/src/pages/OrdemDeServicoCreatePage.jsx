@@ -158,9 +158,27 @@ function OrdemDeServicoCreatePage({ token, onLogout }) {
       navigate(`/ordens/${response.data.id}`);
     } catch (error) {
       console.error("Erro ao criar OS:", error.response?.data || error);
+      
+      let errorMessage = "Erro ao criar Ordem de Serviço.";
+
+      if (error.response && error.response.data) {
+        const errorData = error.response.data;
+
+        if (errorData.non_field_errors && Array.isArray(errorData.non_field_errors)) {
+          errorMessage = errorData.non_field_errors.join(" ");
+        } 
+        else if (typeof errorData === "object" && Object.keys(errorData).length > 0) {
+          try {
+             const firstKey = Object.keys(errorData)[0];
+             errorMessage = `${firstKey}: ${errorData[firstKey][0]}`;
+          } catch(e) {
+          }
+        }
+      }
+      
       setSnackbar({
         open: true,
-        message: "Erro ao criar Ordem de Serviço.",
+        message: errorMessage, 
         severity: "error",
       });
 

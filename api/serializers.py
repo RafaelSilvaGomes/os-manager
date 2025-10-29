@@ -9,7 +9,7 @@ from .models import (
     Pagamento,
 )
 from rest_framework import serializers, validators
-from django.db.models import Sum 
+from django.db.models import Sum, Q
 from decimal import Decimal
 from django.db import transaction
 from datetime import timedelta
@@ -223,6 +223,70 @@ class OrdemDeServicoSerializer(serializers.ModelSerializer):
             return 'EA'
 
         return status_real
+    
+    def validate(self, attrs):
+        profissional = self.context['request'].user
+        new_start = attrs.get('data_agendamento')
+        duracao_horas = attrs.get('duracao_estimada_horas')
+        instance_pk = self.instance.pk if self.instance else None 
+
+        new_end = None
+        if new_start and duracao_horas:
+            try:
+                duracao_td = timedelta(hours=float(duracao_horas))
+                if duracao_td <= timedelta(0):
+                        new_start = None 
+                else:
+                        new_end = new_start + duracao_td
+            except (ValueError, TypeError):
+                new_start = None 
+
+        if not new_start or not new_end:
+            return attrs 
+
+        conflict_query = OrdemDeServico.objects.filter(
+            profissional=profissional,
+            data_agendamento__isnull=False,
+            duracao_estimada_horas__isnull=False 
+        ).exclude(
+            status__in=['CA', 'FN', 'PG']
+        )
+
+        if instance_pk:
+            conflict_query = conflict_query.exclude(pk=instance_pk)
+
+        potential_conflicts = conflict_query.filter(
+            Q(data_agendamento__lt=new_end) 
+        ).select_related('cliente')
+
+        found_conflict = None
+        for existing_os in potential_conflicts:
+            existing_start = existing_os.data_agendamento
+            existing_end = None
+            try:
+                existing_duracao_td = timedelta(hours=float(existing_os.duracao_estimada_horas))
+                if existing_duracao_td > timedelta(0):
+                    existing_end = existing_start + existing_duracao_td
+            except (ValueError, TypeError):
+                continue 
+
+            if not existing_end:
+                continue 
+
+            if existing_start < new_end and new_start < existing_end:
+                found_conflict = existing_os
+                break
+
+        if found_conflict:
+            local_start_time = timezone.localtime(found_conflict.data_agendamento)
+
+            raise serializers.ValidationError(
+                f"Conflito de agendamento: Horário sobreposto com a OS #{found_conflict.id} "
+                f"({found_conflict.cliente.nome if found_conflict.cliente else 'Cliente desconhecido'}) "
+                f"agendada para {local_start_time.strftime('%d/%m/%Y %H:%M')}."
+            )
+
+        return attrs
     
 class AgendaOrdemSerializer(serializers.ModelSerializer):
     title = serializers.SerializerMethodField()

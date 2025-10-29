@@ -12,6 +12,7 @@ from django.db.models import Sum, Value, F, Count, Q
 from django.db.models.functions import Coalesce
 from decimal import Decimal
 from django.utils import timezone
+from django.db.models import ProtectedError
 
 class CreateUserView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -26,6 +27,24 @@ class ClienteViewSet(viewsets.ModelViewSet):
         return Cliente.objects.filter(profissional=self.request.user)
     def perform_create(self, serializer):
         serializer.save(profissional=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        try:
+            self.perform_destroy(instance)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        
+        except ProtectedError as e:
+            return Response(
+                {"detail": "Este cliente não pode ser excluído pois está associado a uma ou mais Ordens de Serviço."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        except Exception as e:
+            return Response(
+                {"detail": f"Erro inesperado: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
         
 class ServicoViewSet(viewsets.ModelViewSet):
     serializer_class = ServicoSerializer
@@ -108,6 +127,24 @@ class MaterialViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(profissional=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        try:
+            self.perform_destroy(instance)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        
+        except ProtectedError as e:
+            return Response(
+                {"detail": "Este material não pode ser excluído pois está associado a uma ou mais Ordens de Serviço."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        except Exception as e:
+            return Response(
+                {"detail": f"Erro inesperado: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
         
 
 class MaterialUtilizadoViewSet(viewsets.ModelViewSet):
