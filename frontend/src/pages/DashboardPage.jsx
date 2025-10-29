@@ -14,6 +14,7 @@ import {
   Lightbulb as LightbulbIcon,
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
+import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 
 function DashboardPage({ token, onLogout }) {
   const [stats, setStats] = useState(null);
@@ -66,13 +67,16 @@ function DashboardPage({ token, onLogout }) {
   const displayStats = {
     totalClientes: stats?.total_clientes || 0,
     totalServicos: stats?.total_servicos || 0,
-    ordensAtivas: stats?.ordens_abertas || 0,
+    ordensAtivas: stats?.ordens_abertas || 0, 
     receitaMes: stats?.faturamento_mes || "0.00",
+    totalOrdensGeral: stats?.total_ordens_geral || 0,
     ordensAbertasDetalhe: stats?.ordens_abertas || 0,
     ordensEmAndamentoDetalhe: stats?.ordens_em_andamento || 0, 
-    ordensConcluidasDetalhe: stats?.ordens_concluidas ||0, 
-    receitaTotal: "0.00", 
-    ticketMedio: "0.00",
+    ordensConcluidasDetalhe: stats?.ordens_concluidas || 0,
+    ordensFinalizadasPendentesDetalhe: stats?.ordens_finalizadas_pendentes || 0,
+    ordensPagasDetalhe: stats?.ordens_pagas || 0, 
+    receitaTotal: stats?.receita_total || "0.00",   
+    ticketMedio: stats?.ticket_medio || "0.00",    
   };
 
   return (
@@ -109,10 +113,10 @@ function DashboardPage({ token, onLogout }) {
          </Card>
 
         <Card sx={{ display: 'flex', alignItems: 'center', p: 2, backgroundColor: '#b8860b', color: 'white' }}>
-          <PlaylistAddCheckIcon sx={{ fontSize: 40, mr: 2 }} />
+          <PlaylistAddCheckIcon sx={{ fontSize: 40, mr: 2 }} /> 
           <Box>
-            <Typography variant="body2" sx={{ opacity: 0.7 }}>Ordens Abertas</Typography>
-            <Typography variant="h5">{displayStats.ordensAtivas}</Typography>
+            <Typography variant="body2" sx={{ opacity: 0.7 }}>Total OS Criadas</Typography>
+            <Typography variant="h5">{displayStats.totalOrdensGeral}</Typography>
           </Box>
         </Card>
 
@@ -148,35 +152,43 @@ function DashboardPage({ token, onLogout }) {
                 <Typography variant="body2" color="text.secondary">Serviços em execução</Typography>
                 <Typography variant="h6" sx={{ ml: 2 }}>{displayStats.ordensEmAndamentoDetalhe}</Typography>
               </Box>
+              
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <ReportProblemIcon sx={{ color: 'warning.light', mr: 1 }} /> 
+                <Typography variant="body1" sx={{ flexGrow: 1 }}>Finalizadas (Pendentes)</Typography>
+                <Typography variant="body2" color="text.secondary">Aguardando pagamento</Typography>
+                <Typography variant="h6" sx={{ ml: 2 }}>{displayStats.ordensFinalizadasPendentesDetalhe}</Typography>
+              </Box>
+
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <CheckCircleIcon sx={{ color: 'success.main', mr: 1 }} />
-                <Typography variant="body1" sx={{ flexGrow: 1 }}>Concluídas</Typography>
-                <Typography variant="body2" color="text.secondary">Serviços finalizados</Typography>
-                <Typography variant="h6" sx={{ ml: 2 }}>{displayStats.ordensConcluidasDetalhe}</Typography>
+                <Typography variant="body1" sx={{ flexGrow: 1 }}>Finalizadas</Typography>
+                <Typography variant="body2" color="text.secondary">Serviço e pagamento OK</Typography>
+                <Typography variant="h6" sx={{ ml: 2 }}>{displayStats.ordensPagasDetalhe}</Typography> 
               </Box>
             </Box>
           </CardContent>
         </Card>
 
         <Card>
-           <CardContent>
+          <CardContent>
              <Typography variant="h6" gutterBottom>Resumo Financeiro</Typography>
              <Box sx={{ mt: 2 }}>
                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                 <Typography variant="body1">Ordens Concluídas (Mês)</Typography>
+                 <Typography variant="body1">OS Concluídas (Total)</Typography> 
                  <Typography variant="h6">{displayStats.ordensConcluidasDetalhe}</Typography>
                </Box>
                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                 <Typography variant="body1">Receita Total (Mês)</Typography>
-                 <Typography variant="h6">R$ {displayStats.receitaMes}</Typography>
+                 <Typography variant="body1">Receita (Total)</Typography>
+                 <Typography variant="h6">R$ {displayStats.receitaTotal}</Typography>
                </Box>
                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                 <Typography variant="body1">Ticket Médio (Mês)</Typography>
+                 <Typography variant="body1">Ticket Médio (Geral)</Typography>
                  <Typography variant="h6">R$ {displayStats.ticketMedio}</Typography>
                </Box>
              </Box>
-           </CardContent>
-         </Card>
+          </CardContent>
+        </Card>
       </Box>
       
       <Card sx={{ mt: 4, backgroundColor: 'action.hover', display: 'flex', alignItems: 'center', p: 2 }}>

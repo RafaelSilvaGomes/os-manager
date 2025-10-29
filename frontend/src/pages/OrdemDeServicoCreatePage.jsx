@@ -35,6 +35,23 @@ import DesignServicesIcon from "@mui/icons-material/DesignServices";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import InfoIcon from "@mui/icons-material/Info";
 
+const duracaoOptions = [
+  { value: 0.5, label: "00:30 h" },
+  { value: 1.0, label: "01:00 h" },
+  { value: 1.5, label: "01:30 h" },
+  { value: 2.0, label: "02:00 h" },
+  { value: 2.5, label: "02:30 h" },
+  { value: 3.0, label: "03:00 h" },
+  { value: 3.5, label: "03:30 h" },
+  { value: 4.0, label: "04:00 h" },
+  { value: 4.5, label: "04:30 h" },
+  { value: 5.0, label: "05:00 h" },
+  { value: 5.5, label: "05:30 h" },
+  { value: 6.0, label: "06:00 h" },
+  { value: 7.0, label: "07:00 h" },
+  { value: 8.0, label: "08:00 h" },
+];
+
 function OrdemDeServicoCreatePage({ token, onLogout }) {
   const navigate = useNavigate();
   const theme = useTheme();
@@ -42,6 +59,7 @@ function OrdemDeServicoCreatePage({ token, onLogout }) {
   const [clienteId, setClienteId] = useState("");
   const [enderecoServico, setEnderecoServico] = useState("");
   const [dataAgendamento, setDataAgendamento] = useState(null);
+  const [duracaoEstimada, setDuracaoEstimada] = useState("");
   const [servicosIds, setServicosIds] = useState([]);
   const [clientes, setClientes] = useState([]);
   const [servicos, setServicos] = useState([]);
@@ -124,6 +142,7 @@ function OrdemDeServicoCreatePage({ token, onLogout }) {
       cliente_id: parseInt(clienteId, 10),
       endereco_servico: enderecoServico,
       data_agendamento: dataAgendamento ? dataAgendamento.toISOString() : null,
+      duracao_estimada_horas: duracaoEstimada ? parseFloat(duracaoEstimada) : null,
       servicos_ids: servicosIds,
       materiais_para_adicionar: materiaisParaEnviar,
       status: "AB",
@@ -284,7 +303,7 @@ function OrdemDeServicoCreatePage({ token, onLogout }) {
             gap: 2,
             gridTemplateColumns: "1fr",
             [theme.breakpoints.up("md")]: {
-              gridTemplateColumns: "repeat(3, 1fr)",
+              gridTemplateColumns: "repeat(2, 1fr)",
             },
           }}
         >
@@ -304,6 +323,14 @@ function OrdemDeServicoCreatePage({ token, onLogout }) {
             </Select>
           </FormControl>
 
+          <TextField
+            label="Endereço de Realização do Serviço"
+            value={enderecoServico}
+            onChange={(e) => setEnderecoServico(e.target.value)}
+            fullWidth
+            required
+          />
+
           <DateTimePicker
             label="Data e Hora do Agendamento"
             value={dataAgendamento}
@@ -313,13 +340,26 @@ function OrdemDeServicoCreatePage({ token, onLogout }) {
             format="DD/MM/YYYY HH:mm"
           />
 
-          <TextField
-            label="Endereço de Realização do Serviço"
-            value={enderecoServico}
-            onChange={(e) => setEnderecoServico(e.target.value)}
-            fullWidth
-            required
-          />
+          <FormControl fullWidth>
+            <InputLabel id="duracao-estimada-label">
+              Duração Estimada
+            </InputLabel>
+            <Select
+              labelId="duracao-estimada-label"
+              value={duracaoEstimada}
+              label="Duração Estimada"
+              onChange={(e) => setDuracaoEstimada(e.target.value)}
+            >
+              <MenuItem value="">
+                <em>Nenhuma (opcional)</em>
+              </MenuItem>
+              {duracaoOptions.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Box>
       </Paper>
 

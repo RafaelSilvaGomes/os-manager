@@ -12,7 +12,8 @@ from rest_framework import serializers, validators
 from django.db.models import Sum 
 from decimal import Decimal
 from django.db import transaction
-
+from datetime import timedelta
+from django.utils import timezone
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -112,6 +113,7 @@ class OrdemDeServicoSerializer(serializers.ModelSerializer):
         required=False
     )
 
+    status = serializers.SerializerMethodField()
     valor_servicos = serializers.SerializerMethodField()
     valor_materiais = serializers.SerializerMethodField()
     valor_total = serializers.SerializerMethodField()
@@ -123,7 +125,7 @@ class OrdemDeServicoSerializer(serializers.ModelSerializer):
         fields = [
             "id", "cliente", "cliente_id", "servicos", "servicos_ids",
             "materiais_utilizados",
-            "pagamentos", "status", "data_abertura", "data_agendamento",
+            "pagamentos", "status", "data_abertura", "data_agendamento", "duracao_estimada_horas",
             "data_finalizacao", "endereco_servico", "valor_servicos",
             "valor_materiais", "valor_total", "valor_pago", "valor_pendente",
             "materiais_para_adicionar"
@@ -189,6 +191,7 @@ class OrdemDeServicoSerializer(serializers.ModelSerializer):
             ordem_de_servico.calcular_e_salvar_total() 
 
             return ordem_de_servico
+        
     def update(self, instance, validated_data):
         with transaction.atomic():
             
@@ -208,6 +211,81 @@ class OrdemDeServicoSerializer(serializers.ModelSerializer):
             instance.calcular_e_salvar_total()
 
             return instance
+    
+    def get_status(self, obj):
+
+        status_real = obj.status
+
+        if (status_real == 'AB' and 
+            obj.data_agendamento and 
+            timezone.now() >= obj.data_agendamento):
+            
+            return 'EA'
+
+        return status_real
+    
+class AgendaOrdemSerializer(serializers.ModelSerializer):
+    title = serializers.SerializerMethodField()
+    start = serializers.DateTimeField(source='data_agendamento', read_only=True)
+    url = serializers.SerializerMethodField()
+    color = serializers.SerializerMethodField()
+    end = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OrdemDeServico
+        fields = [
+            'id',
+            'title',
+            'start',
+            'end',
+            'url',
+            'color',
+            'status'
+        ]
+
+    def get_status(self, obj):
+        status_real = obj.status
+        if (status_real == 'AB' and 
+            obj.data_agendamento and 
+            timezone.now() >= obj.data_agendamento):
+            return 'EA'
+        return status_real
+    
+    def get_title(self, obj):
+        if obj.cliente:
+            return f"OS #{obj.id} - {obj.cliente.nome}"
+        return f"OS #{obj.id}"
+    
+    def get_end(self, obj):
+
+        if obj.data_agendamento and obj.duracao_estimada_horas:
+            try:
+                duracao = timedelta(hours=float(obj.duracao_estimada_horas))
+                return obj.data_agendamento + duracao
+            except Exception:
+                return None
+        return None
+
+    def get_url(self, obj):
+        return f"/ordens/{obj.id}"
+    
+    def get_color(self, obj):
+        status_calculado = self.get_status(obj)
+        
+        if status_calculado == 'AB':
+            return '#0288d1'
+        elif status_calculado == 'EA':
+            return '#ed6c02'
+        elif status_calculado == 'FN':
+            return '#ed6c02' 
+        elif status_calculado == 'PG':
+            return '#2e7d32'
+        elif status_calculado == 'CA':
+            return '#d32f2f' 
+        return '#9e9e9e'
+
+
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User

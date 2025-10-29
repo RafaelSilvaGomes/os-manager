@@ -94,7 +94,7 @@ function OrdensDeServicoPage({ token, onLogout }) {
       case "FN":
         return "Finalizada (Pendente)";
       case "PG":
-        return "Paga";
+        return "Finalizada";
       case "CA":
         return "Cancelada";
       default:

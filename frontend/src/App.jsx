@@ -49,6 +49,7 @@ import MateriaisPage from "./pages/MateriaisPage";
 import OrdensDeServicoPage from "./pages/OrdensDeServicoPage";
 import OrdemDeServicoCreatePage from "./pages/OrdemDeServicoCreatePage";
 import OrdemDeServicoDetailPage from "./pages/OrdemDeServicoDetailPage";
+import AgendaPage from "./pages/AgendaPage";
 
 const professionPalettes = {
   eletricista: {
@@ -321,6 +322,22 @@ function App() {
                     >
                       Ordens
                     </Button>
+                    <Button
+                      component={Link}
+                      to="/agenda"
+                      color="inherit"
+                      size="small"
+                      sx={{
+                        padding: "6px 12px",
+                        borderRadius: 1,
+                        "&:hover": {
+                          backgroundColor: theme.palette.primary.contrastText,
+                          color: theme.palette.primary.main,
+                        },
+                      }}
+                    >
+                      Agenda
+                    </Button>
                   </Box>
 
                   <Button
@@ -527,6 +544,10 @@ function App() {
                         onLogout={handleLogout}
                       />
                     }
+                  />
+                  <Route 
+                    path="/agenda" 
+                    element={<AgendaPage token={token} onLogout={handleLogout} />} 
                   />
                   <Route
                     path="/"

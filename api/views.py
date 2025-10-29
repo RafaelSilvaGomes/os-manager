@@ -1,13 +1,14 @@
 # api/views.py
 from django.contrib.auth.models import User
-from rest_framework import generics, viewsets,status, serializers
-from .serializers import UserSerializer,ClienteSerializer, ServicoSerializer, OrdemDeServicoSerializer, MaterialSerializer, MaterialUtilizadoSerializer, PagamentoSerializer, RegisterSerializer
+from rest_framework import generics, viewsets, status, serializers
+from rest_framework.decorators import action
+from .serializers import UserSerializer,ClienteSerializer, ServicoSerializer, OrdemDeServicoSerializer, MaterialSerializer, MaterialUtilizadoSerializer, PagamentoSerializer, AgendaOrdemSerializer, RegisterSerializer
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from .models import Cliente, Servico, OrdemDeServico, Material, MaterialUtilizado, Pagamento
 from rest_framework.views import APIView
 from django.utils import timezone
-from django.db.models import Sum, Value, F, Count
+from django.db.models import Sum, Value, F, Count, Q
 from django.db.models.functions import Coalesce
 from decimal import Decimal
 from django.utils import timezone
@@ -16,6 +17,7 @@ class CreateUserView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [AllowAny]
+
 class ClienteViewSet(viewsets.ModelViewSet):
     serializer_class =ClienteSerializer
     permission_classes = [IsAuthenticated]
@@ -24,6 +26,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
         return Cliente.objects.filter(profissional=self.request.user)
     def perform_create(self, serializer):
         serializer.save(profissional=self.request.user)
+        
 class ServicoViewSet(viewsets.ModelViewSet):
     serializer_class = ServicoSerializer
     permission_classes = [IsAuthenticated]
@@ -34,6 +37,20 @@ class ServicoViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(profissional=self.request.user)
         
+class AgendaOrdemListView(generics.ListAPIView):
+    serializer_class = AgendaOrdemSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+
+        return OrdemDeServico.objects.filter(
+            profissional=user,
+            data_agendamento__isnull=False
+        ).exclude(
+            status='CA'
+        ).select_related('cliente')
+
 class OrdemDeServicoViewSet(viewsets.ModelViewSet):
 
     serializer_class = OrdemDeServicoSerializer
@@ -46,6 +63,41 @@ class OrdemDeServicoViewSet(viewsets.ModelViewSet):
         nova_os = serializer.save(profissional=self.request.user)
         nova_os.refresh_from_db()
         nova_os.calcular_e_salvar_total()
+
+    @action(detail=True, methods=['post'], url_path='finalizar')
+    def finalizar(self, request, pk=None):
+        try:
+            ordem = self.get_object()
+        except OrdemDeServico.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        
+        ordem_status_calculado = self.get_serializer(ordem).data.get('status')
+
+        if ordem_status_calculado in ['AB', 'EA']:
+            
+            valor_total = ordem.valor_total
+            valor_pago_agregado = ordem.pagamentos.aggregate(
+                total=Coalesce(Sum('valor_pago'), Value(Decimal('0.00')))
+            )['total']
+            valor_pendente = (valor_total - valor_pago_agregado).quantize(Decimal('0.01'))
+            
+            if valor_pendente <= Decimal('0.01'):
+                ordem.status = 'PG'
+            else:
+                ordem.status = 'FN'
+            
+            if not ordem.data_finalizacao:
+                 ordem.data_finalizacao = timezone.now()
+                 
+            ordem.save(update_fields=['status', 'data_finalizacao'])
+            
+            serializer = self.get_serializer(ordem)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(
+                {"detail": f"Não é possível finalizar uma OS com status '{ordem.get_status_display()}'."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 class MaterialViewSet(viewsets.ModelViewSet):
     serializer_class = MaterialSerializer
@@ -121,12 +173,11 @@ class PagamentoViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer, is_pago_total):
         
         pagamento = serializer.save()
-
-        if is_pago_total:
-            ordem_de_servico = pagamento.ordem_de_servico
+        ordem_de_servico = pagamento.ordem_de_servico
+        
+        if ordem_de_servico.status == 'FN' and is_pago_total:
             ordem_de_servico.status = 'PG'
-            ordem_de_servico.data_finalizacao = timezone.now()
-            ordem_de_servico.save(update_fields=['status', 'data_finalizacao'])
+            ordem_de_servico.save(update_fields=['status'])
             
     def perform_destroy(self, instance):
         ordem_de_servico = instance.ordem_de_servico
@@ -160,15 +211,21 @@ class DashboardStatsView(APIView):
         hoje = timezone.now()
 
         qs_ordens = OrdemDeServico.objects.filter(profissional=profissional)
+        total_ordens_geral = qs_ordens.count()
+        ordens_abertas_no_banco = qs_ordens.filter(status='AB')
+        ordens_que_viraram_ea = ordens_abertas_no_banco.filter(
+            data_agendamento__isnull=False,
+            data_agendamento__lte=hoje
+        ).count()
+        ordens_abertas_real = ordens_abertas_no_banco.count() - ordens_que_viraram_ea
+        ordens_ea_no_banco = qs_ordens.filter(status='EA').count()
+        ordens_em_andamento_total = ordens_ea_no_banco + ordens_que_viraram_ea
         contagens_status = qs_ordens.values('status').annotate(count=Count('id'))
         status_map = {item['status']: item['count'] for item in contagens_status}
-
-        ordens_abertas = status_map.get('AB', 0)
-        ordens_em_andamento = status_map.get('EA', 0)
-        ordens_finalizadas = status_map.get('FN', 0)
-        ordens_pagas = status_map.get('PG', 0)
-        ordens_canceladas = status_map.get('CA', 0)
-        ordens_concluidas = ordens_finalizadas + ordens_pagas
+        ordens_finalizadas_pendentes = qs_ordens.filter(status='FN').count()
+        ordens_pagas = qs_ordens.filter(status='PG').count()
+        ordens_canceladas = qs_ordens.filter(status='CA').count()
+        ordens_concluidas = ordens_finalizadas_pendentes + ordens_pagas
 
         total_clientes = Cliente.objects.filter(profissional=profissional).count()
         total_servicos = Servico.objects.filter(profissional=profissional).count()
@@ -194,18 +251,18 @@ class DashboardStatsView(APIView):
             ticket_medio = Decimal('0.00')
 
         data = {
-            'ordens_abertas': ordens_abertas,
-            'ordens_em_andamento': ordens_em_andamento,
+            'ordens_abertas': ordens_abertas_real,
+            'ordens_em_andamento': ordens_em_andamento_total,
             'ordens_concluidas': ordens_concluidas,
-            'ordens_pagas': ordens_pagas,
+            'ordens_pagas': ordens_pagas, 
+            'ordens_finalizadas_pendentes': ordens_finalizadas_pendentes, 
             'ordens_canceladas': ordens_canceladas,
-            
             'total_clientes': total_clientes,
             'total_servicos': total_servicos,
-            
             'faturamento_mes': faturamento_mes,
             'receita_total': receita_total,
             'ticket_medio': ticket_medio,
+            'total_ordens_geral': total_ordens_geral,
         }
 
         return Response(data)

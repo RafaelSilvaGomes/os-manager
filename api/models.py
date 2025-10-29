@@ -63,7 +63,19 @@ class OrdemDeServico(models.Model):
 
 
     endereco_servico = models.CharField(max_length=255, blank=True)
-    data_agendamento = models.DateTimeField(null=True, blank=True)
+    data_agendamento = models.DateTimeField(
+        null=True, 
+        blank=True,
+        verbose_name="Data de Agendamento"
+    )
+
+    duracao_estimada_horas = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        null=True, 
+        blank=True,
+        verbose_name="Duração Estimada (em horas)"
+    )
 
     def calcular_e_salvar_total(self):
         total_servicos = sum(servico.preco for servico in self.servicos.all())

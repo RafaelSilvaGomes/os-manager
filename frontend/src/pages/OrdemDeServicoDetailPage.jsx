@@ -30,7 +30,8 @@ import Inventory2Icon from "@mui/icons-material/Inventory2";
 import PaymentIcon from "@mui/icons-material/Payment";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import InfoIcon from "@mui/icons-material/Info";
-
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import AddMaterialForm from "../components/AddMaterialForm";
 import AddPagamentoForm from "../components/AddPagamentoForm";
 
@@ -46,6 +47,7 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
     message: "",
     severity: "success",
   });
+  const [isFinalizing, setIsFinalizing] = useState(false);
 
   const fetchOrdemDetalhes = useCallback(async () => {
     if (!token) {
@@ -107,12 +109,64 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
       case "FN":
         return "Finalizada (Pendente)";
       case "PG":
-        return "Paga";
+        return "Finalizada";
       case "CA":
         return "Cancelada";
       default:
         return status;
     }
+  };
+
+  const handleFinalizarOS = async () => {
+    if (!token) {
+        setSnackbar({ open: true, message: "Erro de autenticação.", severity: "error" });
+        return;
+    }
+    if (window.confirm("Tem certeza que deseja marcar este serviço como finalizado?")) {
+        setIsFinalizing(true);
+        try {
+            const config = { headers: { Authorization: `Bearer ${token}` } };
+            await axios.post(
+                `http://127.0.0.1:8000/api/ordens/${id}/finalizar/`,
+                {},
+                config
+            );
+            setSnackbar({
+                open: true,
+                message: "Serviço marcado como finalizado!",
+                severity: "success",
+            });
+            fetchOrdemDetalhes();
+        } catch (error) {
+            console.error("Erro ao finalizar OS:", error);
+            setSnackbar({
+                open: true,
+                message: error.response?.data?.detail || "Erro ao finalizar serviço.",
+                severity: "error",
+            });
+            if (error.response && error.response.status === 401) {
+                if (onLogout) onLogout();
+            }
+        } finally {
+            setIsFinalizing(false);
+        }
+    }
+  };
+
+  const formatarDuracao = (horas) => {
+    if (!horas) return "N/A";
+    
+    const horasNum = parseFloat(horas);
+    if (isNaN(horasNum)) return "N/A";
+
+    const horasFormatadas = horasNum.toLocaleString("pt-BR", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    });
+    
+    const sufixo = horasNum === 1 ? "hora" : "horas";
+    
+    return `${horasFormatadas} ${sufixo}`;
   };
 
   const handleCloseSnackbar = (event, reason) => {
@@ -259,11 +313,26 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
             OS #{ordem.id} - {ordem.cliente.nome}
           </Typography>
         </Box>
-        <Chip
-          label={getStatusLabel(ordem.status)}
-          color={getStatusColor(ordem.status)}
-          sx={{ fontWeight: "bold" }}
-        />
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <Chip
+            label={getStatusLabel(ordem.status)}
+            color={getStatusColor(ordem.status)}
+            sx={{ fontWeight: "bold" }}
+          />
+
+          {(ordem.status === 'AB' || ordem.status === 'EA') && (
+            <Button
+              variant="contained"
+              color="success"
+              size="small"
+              startIcon={<CheckCircleOutlineIcon />}
+              onClick={handleFinalizarOS}
+              disabled={isFinalizing}
+            >
+              {isFinalizing ? "Finalizando..." : "Finalizar Serviço"}
+            </Button>
+          )}
+        </Box>
       </Box>
 
       <Card sx={{ mb: 3 }}>
@@ -301,6 +370,13 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
                     })
                   : "N/A"}
               </Typography>
+              <Typography sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <AccessTimeIcon fontSize="small" sx={{ color: 'text.secondary', mr: 0.5 }} />
+                  <span>
+                    <strong>Duração Estimada:</strong>{" "}
+                    {formatarDuracao(ordem.duracao_estimada_horas)}
+                  </span>
+                </Typography>
             </Box>
           </Box>
           <Divider sx={{ my: 2 }} />
