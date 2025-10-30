@@ -25,7 +25,11 @@ import {
   Card,
   CardActionArea,
   CardContent,
+  FormControl,
+  FormGroup,
+  Checkbox,
 } from "@mui/material";
+import PaymentIcon from '@mui/icons-material/Payment';
 import SettingsIcon from "@mui/icons-material/Settings";
 import ElectricBoltIcon from "@mui/icons-material/ElectricBolt";
 import BuildIcon from "@mui/icons-material/Build";
@@ -104,6 +108,15 @@ const professionPalettes = {
   },
 };
 
+const allPaymentMethods = [
+  { value: "PIX", label: "Pix" },
+  { value: "DIN", label: "Dinheiro" },
+  { value: "CC", label: "Cartão de Crédito" },
+  { value: "CD", label: "Cartão de Débito" },
+  { value: "BOL", label: "Boleto" },
+  { value: "TRA", label: "Transferência/TED" },
+];
+
 function App() {
   const [token, setToken] = useState(() => sessionStorage.getItem("accessToken") || null);
 
@@ -118,6 +131,18 @@ function App() {
   const [anchorEl, setAnchorEl] = useState(null);
   const [openProfessionDialog, setOpenProfessionDialog] = useState(false);
   const openMenu = Boolean(anchorEl);
+  const [openPaymentDialog, setOpenPaymentDialog] = useState(false);
+
+  const [paymentMethods, setPaymentMethods] = useState(() => {
+    const defaultMethods = allPaymentMethods.map(m => m.value); 
+    try {
+      const stored = localStorage.getItem("paymentMethods");
+      return stored ? JSON.parse(stored) : defaultMethods;
+    } catch (e) {
+      console.error("Erro ao ler formas de pagamento:", e);
+      return defaultMethods;
+    }
+  });
 
   const theme = useMemo(() => {
     const paletteKey = token ? profession : firstProfessionKey;
@@ -156,6 +181,28 @@ function App() {
 
   const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
+
+  const handleOpenPaymentDialog = () => {
+    setOpenPaymentDialog(true);
+    handleMenuClose();
+  };
+
+  const handleClosePaymentDialog = () => {
+    try {
+      localStorage.setItem("paymentMethods", JSON.stringify(paymentMethods));
+    } catch (e) {
+      console.error("Erro ao salvar formas de pagamento:", e);
+    }
+    setOpenPaymentDialog(false);
+  };
+
+  const handlePaymentMethodChange = (event) => {
+    const { value, checked } = event.target;
+    setPaymentMethods((prev) =>
+      checked ? [...prev, value] : prev.filter((m) => m !== value)
+    );
+  };
+
   const handleOpenProfessionDialog = () => {
     setOpenProfessionDialog(true);
     handleMenuClose();
@@ -176,10 +223,10 @@ function App() {
 
   const handleLogin = (accessToken) => {
     try {
-      sessionStorage.setItem("accessToken", accessToken); // MUDANÇA AQUI
+      sessionStorage.setItem("accessToken", accessToken);
       setToken(accessToken);
     } catch (e) {
-      console.error("ERRO GRAVE AO SALVAR NO SESSIONSTORAGE:", e); // MUDANÇA AQUI
+      console.error("ERRO GRAVE AO SALVAR NO SESSIONSTORAGE:", e);
       alert(
         "Ocorreu um erro ao salvar sua sessão. Tente limpar o cache do navegador."
       );
@@ -380,6 +427,9 @@ function App() {
               <MenuItem onClick={handleOpenProfessionDialog}>
                 Mudar Profissão
               </MenuItem>
+              <MenuItem onClick={handleOpenPaymentDialog}>
+                Formas de Pagamento
+              </MenuItem>
               <MenuItem>
                 <FormControlLabel
                   control={
@@ -392,6 +442,41 @@ function App() {
                 />
               </MenuItem>
             </Menu>
+            
+            <Dialog open={openPaymentDialog} onClose={handleClosePaymentDialog}>
+              <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <PaymentIcon />
+                Gerenciar Formas de Pagamento
+              </DialogTitle>
+              <DialogContent>
+                <FormControl component="fieldset" variant="standard" sx={{ mt: 1 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{mb: 1}}>
+                    Selecione as formas de pagamento que você aceita.
+                  </Typography>
+                  <FormGroup>
+                    {allPaymentMethods.map((method) => (
+                      <FormControlLabel
+                        key={method.value}
+                        control={
+                          <Checkbox
+                            checked={paymentMethods.includes(method.value)}
+                            onChange={handlePaymentMethodChange}
+                            value={method.value}
+                          />
+                        }
+                        label={method.label}
+                        sx={{ color: 'text.primary' }}
+                      />
+                    ))}
+                  </FormGroup>
+                </FormControl>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={handleClosePaymentDialog} variant="contained">
+                  Salvar e Fechar
+                </Button>
+              </DialogActions>
+            </Dialog>
 
             <Dialog
               open={openProfessionDialog}

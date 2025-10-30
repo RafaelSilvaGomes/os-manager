@@ -47,10 +47,11 @@ class ServicoSerializer(serializers.ModelSerializer):
 class MaterialSerializer(serializers.ModelSerializer):
     class Meta:
         model = Material
-        fields = ["id", "nome", "descricao", "preco_unidade", "unidade_medida"] 
+        fields = ["id", "nome", "descricao", "preco_unidade", "unidade_medida", "loja"]
         extra_kwargs = {
             'descricao': {'required': False, 'allow_blank': True},
             'unidade_medida': {'required': False, 'allow_blank': True},
+            'loja': {'required': False, 'allow_blank': True},
         }
 
 
@@ -60,16 +61,19 @@ class MaterialUtilizadoSerializer(serializers.ModelSerializer):
         queryset=Material.objects.all(), write_only=True, source='material'
     )
 
+    ordem_de_servico = serializers.PrimaryKeyRelatedField(
+        queryset=OrdemDeServico.objects.all()
+    )
+
     class Meta:
         model = MaterialUtilizado
         fields = [
-            "id",
-            "ordem_de_servico",
-            "material",
-            "material_id",
-            "quantidade",
-        ]
-        read_only_fields = ["ordem_de_servico"]
+        "id",
+        "ordem_de_servico",
+        "material",
+        "material_id",
+        "quantidade",
+    ]
 
 class MaterialUtilizadoWriteSerializer(serializers.Serializer):
     material_id = serializers.IntegerField()

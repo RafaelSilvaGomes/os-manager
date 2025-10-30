@@ -118,6 +118,21 @@ class OrdemDeServicoViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+class MaterialStoreNamesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        stores = Material.objects.filter(
+            profissional=request.user, 
+            loja__isnull=False
+        ).exclude(
+            loja__exact=''
+        ).values_list(
+            'loja', flat=True 
+        ).distinct().order_by('loja')
+        
+        return Response(list(stores))
+    
 class MaterialViewSet(viewsets.ModelViewSet):
     serializer_class = MaterialSerializer
     permission_classes = [IsAuthenticated]

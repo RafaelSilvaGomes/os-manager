@@ -1,9 +1,6 @@
-// src/components/AddMaterialForm.jsx
-
 import { useState, useEffect } from "react";
 import axios from "axios";
 
-// 1. As importações completas do Material-UI para este componente
 import {
   Box,
   Grid,
@@ -13,35 +10,51 @@ import {
   FormControl,
   Button,
   TextField,
-  Typography,
 } from "@mui/material";
 
 function AddMaterialForm({ token, ordemId, onSuccess, onLogout, setSnackbar }) {
-  const [materiais, setMateriais] = useState([]);
+  const [allMateriais, setAllMateriais] = useState([]);
+  const [filteredMateriais, setFilteredMateriais] = useState([]); 
+  const [storeOptions, setStoreOptions] = useState([]); 
+  const [selectedStore, setSelectedStore] = useState("");
   const [materialId, setMaterialId] = useState("");
   const [quantidade, setQuantidade] = useState(1);
 
   useEffect(() => {
-    const fetchMateriais = async () => {
+    const fetchAllData = async () => {
       if (!token) {
         return;
       }
       const config = { headers: { Authorization: `Bearer ${token}` } };
       try {
-        const response = await axios.get(
-          "http://127.0.0.1:8000/api/materiais/",
-          config
-        );
-        setMateriais(response.data);
+        const [materiaisRes, storesRes] = await Promise.all([
+          axios.get("http://127.0.0.1:8000/api/materiais/", config),
+          axios.get("http://127.0.0.1:8000/api/material-stores/", config),
+        ]);
+        setAllMateriais(materiaisRes.data);
+        setFilteredMateriais(materiaisRes.data);
+        setStoreOptions(storesRes.data);
+
       } catch (error) {
-        console.error("Erro ao buscar catálogo de materiais:", error);
+        console.error("Erro ao buscar catálogo de materiais ou lojas:", error);
         if (error.response && error.response.status === 401) {
           if (onLogout) onLogout();
         }
       }
     };
-    fetchMateriais();
+    fetchAllData();
   }, [token, onLogout]);
+
+  useEffect(() => {
+    if (selectedStore === "") {
+      setFilteredMateriais(allMateriais);
+    } else {
+      setFilteredMateriais(
+        allMateriais.filter((m) => m.loja === selectedStore)
+      );
+    }
+    setMaterialId("");
+  }, [selectedStore, allMateriais]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -105,9 +118,29 @@ function AddMaterialForm({ token, ordemId, onSuccess, onLogout, setSnackbar }) {
 
     <Box component="form" onSubmit={handleSubmit}>
       <Grid container spacing={2} alignItems="center">
-        <Grid xs={12} sm={6}>
+        <Grid item xs={12} sm={6} md={12}>
           <FormControl fullWidth size="small">
-            <InputLabel id="material-select-label">Material</InputLabel>
+            <InputLabel id="store-filter-label">L</InputLabel>
+            <Select
+              labelId="store-filter-label"
+              value={selectedStore}
+              label="Filtrar por Loja"
+              onChange={(e) => setSelectedStore(e.target.value)}
+            >
+              <MenuItem value="">
+                <em>Todas as Lojas</em>
+              </MenuItem>
+              {storeOptions.map((storeName) => (
+                <MenuItem key={storeName} value={storeName}>
+                  {storeName}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6} md={6}>
+          <FormControl fullWidth size="small">
+            <InputLabel id="material-select-label">M</InputLabel>
             <Select
               labelId="material-select-label"
               value={materialId}
@@ -118,7 +151,7 @@ function AddMaterialForm({ token, ordemId, onSuccess, onLogout, setSnackbar }) {
               <MenuItem value="">
                 <em>-- Selecione --</em>
               </MenuItem>
-              {materiais.map((material) => (
+              {filteredMateriais.map((material) => (
                 <MenuItem key={material.id} value={material.id}>
                   {material.nome}
                 </MenuItem>
@@ -126,7 +159,7 @@ function AddMaterialForm({ token, ordemId, onSuccess, onLogout, setSnackbar }) {
             </Select>
           </FormControl>
         </Grid>
-        <Grid xs={4} sm={3}>
+        <Grid item xs={4} sm={3} md={3}>
           <TextField
             type="number"
             label="Qtd."
@@ -138,7 +171,7 @@ function AddMaterialForm({ token, ordemId, onSuccess, onLogout, setSnackbar }) {
             InputProps={{ inputProps: { min: 1 } }}
           />
         </Grid>
-        <Grid xs={8} sm={3}>
+        <Grid item xs={8} sm={3} md={3}>
           <Button type="submit" variant="contained" fullWidth>
             Adicionar
           </Button>

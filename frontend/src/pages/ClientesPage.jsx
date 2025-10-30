@@ -18,6 +18,11 @@ import {
   Snackbar,
   Alert,
   useTheme,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -43,6 +48,9 @@ function ClientesPage({ token, onLogout }) {
     message: "",
     severity: "success",
   });
+
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [clienteToDelete, setClienteToDelete] = useState(null);
 
   useEffect(() => {
     const fetchClientes = async () => {
@@ -141,10 +149,24 @@ function ClientesPage({ token, onLogout }) {
       setIsFormOpen(false);
       clearForm();
     } catch (error) {
-      console.error("Erro ao salvar cliente:", error);
+      console.error("Erro ao salvar cliente:", error.response?.data || error);
+
+      let errorMessage = "Erro ao salvar cliente.";
+      if (error.response && error.response.data) {
+        const errorData = error.response.data;
+        try {
+          const firstKey = Object.keys(errorData)[0];
+          errorMessage = `${firstKey}: ${errorData[firstKey][0]}`;
+        } catch (e) {
+          if (errorData.detail) {
+            errorMessage = errorData.detail;
+          }
+        }
+      }
+      
       setSnackbar({
         open: true,
-        message: "Erro ao salvar cliente.",
+        message: errorMessage,
         severity: "error",
       });
       if (error.response && error.response.status === 401) {
@@ -153,7 +175,25 @@ function ClientesPage({ token, onLogout }) {
     }
   };
 
-  const handleDeleteCliente = async (clienteId) => {
+  const handleDeleteCliente = (clienteId) => {
+    const cliente = clientes.find((c) => c.id === clienteId);
+    if (cliente) {
+      setClienteToDelete(cliente);
+      setIsConfirmDialogOpen(true);
+    }
+  };
+
+  const handleCloseConfirmDialog = () => {
+    setIsConfirmDialogOpen(false);
+    setTimeout(() => setClienteToDelete(null), 150);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!clienteToDelete) return;
+
+    const clienteId = clienteToDelete.id;
+    handleCloseConfirmDialog();
+
     if (!token) {
       setSnackbar({
         open: true,
@@ -162,25 +202,24 @@ function ClientesPage({ token, onLogout }) {
       });
       return;
     }
-    if (window.confirm("Tem certeza que deseja deletar este cliente?")) {
-      try {
-        const config = { headers: { Authorization: `Bearer ${token}` } };
-        await axios.delete(
-          `http://127.0.0.1:8000/api/clientes/${clienteId}/`,
-          config
-        );
-        setClientes(clientes.filter((cliente) => cliente.id !== clienteId));
-        setSnackbar({
-          open: true,
-          message: "Cliente deletado com sucesso!",
-          severity: "success",
-        });
-      } catch (error) {
+
+    try {
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      await axios.delete(
+        `http://127.0.0.1:8000/api/clientes/${clienteId}/`,
+        config
+      );
+      setClientes(clientes.filter((cliente) => cliente.id !== clienteId));
+      setSnackbar({
+        open: true,
+        message: "Cliente deletado com sucesso!",
+        severity: "success",
+      });
+    } catch (error) {
       console.error("Erro ao deletar cliente:", error);
       let errorMessage = "Erro ao deletar cliente.";
-      
       if (error.response && error.response.data && error.response.data.detail) {
-         errorMessage = error.response.data.detail;
+        errorMessage = error.response.data.detail;
       }
       
       setSnackbar({
@@ -192,7 +231,6 @@ function ClientesPage({ token, onLogout }) {
       if (error.response && error.response.status === 401) {
         if (onLogout) onLogout();
       }
-    }
     }
   };
 
@@ -432,6 +470,30 @@ function ClientesPage({ token, onLogout }) {
           {snackbar.message}
         </Alert>
       </Snackbar>
+      <Dialog
+          open={isConfirmDialogOpen}
+          onClose={handleCloseConfirmDialog}
+          aria-labelledby="alert-dialog-title"
+          aria-describedby="alert-dialog-description"
+        >
+          <DialogTitle id="alert-dialog-title">Confirmar Exclusão</DialogTitle>
+          <DialogContent>
+            <DialogContentText id="alert-dialog-description">
+              Tem certeza que deseja deletar o cliente{" "}
+              <strong>{clienteToDelete?.nome}</strong>? Esta ação não pode ser
+              desfeita e pode falhar se o cliente estiver associado a uma Ordem de
+              Serviço.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseConfirmDialog} color="inherit">
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmDelete} color="error" autoFocus>
+              Deletar
+            </Button>
+          </DialogActions>
+        </Dialog>
     </Box>
   );
 }

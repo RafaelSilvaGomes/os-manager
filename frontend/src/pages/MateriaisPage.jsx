@@ -16,12 +16,12 @@ import {
   Alert,
   useTheme,
   IconButton,
-  // --- NOVOS IMPORTS ---
   Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
   DialogTitle,
+  Autocomplete,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
@@ -35,6 +35,8 @@ function MateriaisPage({ token, onLogout }) {
   const theme = useTheme();
 
   const [nome, setNome] = useState("");
+  const [loja, setLoja] = useState("");
+  const [storeOptions, setStoreOptions] = useState([]);
   const [descricao, setDescricao] = useState("");
   const [precoUnidade, setPrecoUnidade] = useState("");
   const [unidadeMedida, setUnidadeMedida] = useState("un");
@@ -85,6 +87,28 @@ function MateriaisPage({ token, onLogout }) {
     fetchMateriais();
   }, [token, onLogout]);
 
+  useEffect(() => {
+    const fetchStoreNames = async () => {
+      if (!token) {
+        setStoreOptions([]);
+        return;
+      }
+      try {
+        const config = { headers: { Authorization: `Bearer ${token}` } };
+        const response = await axios.get(
+          "http://127.0.0.1:8000/api/material-stores/",
+          config
+        );
+        setStoreOptions(response.data);
+      } catch (error) {
+        console.error("Erro ao buscar nomes das lojas:", error);
+      }
+    };
+
+    fetchStoreNames(); 
+
+  }, [token]);
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!token) {
@@ -100,6 +124,7 @@ function MateriaisPage({ token, onLogout }) {
       descricao,
       preco_unidade: precoUnidade,
       unidade_medida: unidadeMedida,
+      loja: loja,
     };
 
     try {
@@ -131,6 +156,10 @@ function MateriaisPage({ token, onLogout }) {
           message: "Material cadastrado com sucesso!",
           severity: "success",
         });
+      }
+
+      if (loja && !storeOptions.includes(loja)) {
+        setStoreOptions([...storeOptions, loja].sort());
       }
 
       if (editingMaterial) {
@@ -252,6 +281,7 @@ function MateriaisPage({ token, onLogout }) {
     setDescricao(material.descricao || "");
     setPrecoUnidade(material.preco_unidade);
     setUnidadeMedida(material.unidade_medida || "un");
+    setLoja(material.loja || "");
     setIsFormOpen(true);
     window.scrollTo(0, 0);
   };
@@ -266,6 +296,7 @@ function MateriaisPage({ token, onLogout }) {
     setDescricao("");
     setPrecoUnidade("");
     setUnidadeMedida("un");
+    setLoja("");
     setEditingMaterial(null);
   };
 
@@ -337,7 +368,7 @@ function MateriaisPage({ token, onLogout }) {
                 gridTemplateColumns: "repeat(2, 1fr)",
               },
               [theme.breakpoints.up("md")]: {
-                gridTemplateColumns: "repeat(3, 1fr)",
+                gridTemplateColumns: "repeat(4, 1fr)",
               },
             }}
           >
@@ -348,8 +379,35 @@ function MateriaisPage({ token, onLogout }) {
               required
               sx={{
                 gridColumn: "1 / -1",
-                [theme.breakpoints.up("md")]: {
+                [theme.breakpoints.up("sm")]: {
                   gridColumn: "1 / 2",
+                },
+                [theme.breakpoints.up("md")]: {
+                  gridColumn: "1 / 2", 
+                },
+              }}
+            />
+            <Autocomplete
+              freeSolo 
+              options={storeOptions} 
+              value={loja}
+              onInputChange={(event, newValue) => {
+
+                setLoja(newValue || ""); 
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Loja (Opcional)"
+                />
+              )}
+              sx={{
+                gridColumn: "1 / -1",
+                [theme.breakpoints.up("sm")]: {
+                  gridColumn: "2 / 3", 
+                },
+                [theme.breakpoints.up("md")]: {
+                  gridColumn: "2 / 3",
                 },
               }}
             />
@@ -360,7 +418,7 @@ function MateriaisPage({ token, onLogout }) {
               required
               sx={{
                 [theme.breakpoints.up("md")]: {
-                  gridColumn: "2 / 3",
+                  gridColumn: "3 / 4",
                 },
               }}
             />
@@ -373,7 +431,7 @@ function MateriaisPage({ token, onLogout }) {
               inputProps={{ step: "0.01" }}
               sx={{
                 [theme.breakpoints.up("md")]: {
-                  gridColumn: "3 / 4",
+                  gridColumn: "4 / 5",
                 },
               }}
             />
@@ -443,14 +501,11 @@ function MateriaisPage({ token, onLogout }) {
                   <IconButton
                     size="small"
                     color="error"
-                    // --- ALTERADO ---
-                    // Remove o window.confirm e chama a função que abre o dialog
                     onClick={() => handleDeleteMaterial(material.id)}
                   >
                     <DeleteIcon fontSize="small" />
                   </IconButton>
                 </Box>
-                {/* ... (Resto do CardContent) ... */}
                 <Typography
                   variant="h6"
                   sx={{
@@ -479,6 +534,23 @@ function MateriaisPage({ token, onLogout }) {
                 >
                   {material.descricao || "Sem descrição"}
                 </Typography>
+
+                {material.loja && (
+                  <Typography 
+                    variant="caption" 
+                    color="text.secondary" 
+                    sx={{ 
+                      display: 'block', 
+                      mt: -1,
+                      mb: 1, 
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Loja: {material.loja}
+                  </Typography>
+                )}
 
                 <Typography
                   variant="body1"

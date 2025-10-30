@@ -1,17 +1,13 @@
-// Em: src/pages/AgendaPage.jsx
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-// Imports do FullCalendar
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import listPlugin from "@fullcalendar/list";
 import ptBrLocale from "@fullcalendar/core/locales/pt-br";
 
-// Imports do Material-UI
 import {
   Box,
   CircularProgress,

@@ -64,6 +64,9 @@ function OrdemDeServicoCreatePage({ token, onLogout }) {
   const [clientes, setClientes] = useState([]);
   const [servicos, setServicos] = useState([]);
   const [materiais, setMateriais] = useState([]);
+  const [filteredMateriais, setFilteredMateriais] = useState([]);
+  const [storeOptions, setStoreOptions] = useState([]);
+  const [selectedStore, setSelectedStore] = useState("");
   const [materiaisNoCarrinho, setMateriaisNoCarrinho] = useState([]);
   const [materialSelecionado, setMaterialSelecionado] = useState("");
   const [quantidadeMaterial, setQuantidadeMaterial] = useState(1);
@@ -80,6 +83,8 @@ function OrdemDeServicoCreatePage({ token, onLogout }) {
       setClientes([]);
       setServicos([]);
       setMateriais([]);
+      setFilteredMateriais([]);
+      setStoreOptions([]);
       return;
     }
 
@@ -98,12 +103,18 @@ function OrdemDeServicoCreatePage({ token, onLogout }) {
       "http://127.0.0.1:8000/api/materiais/",
       config
     );
+    const fetchStores = axios.get(
+      "http://127.0.0.1:8000/api/material-stores/", 
+      config
+    );
 
-    Promise.all([fetchClientes, fetchServicos, fetchMateriais])
+    Promise.all([fetchClientes, fetchServicos, fetchMateriais, fetchStores])
       .then((responses) => {
         setClientes(responses[0].data);
         setServicos(responses[1].data);
         setMateriais(responses[2].data);
+        setFilteredMateriais(responses[2].data);
+        setStoreOptions(responses[3].data);
       })
       .catch((error) => {
         console.error("Erro ao buscar dados:", error);
@@ -121,6 +132,21 @@ function OrdemDeServicoCreatePage({ token, onLogout }) {
         setLoading(false);
       });
   }, [token, onLogout]);
+
+  useEffect(() => {
+    if (selectedStore === "") {
+      setFilteredMateriais(materiais);
+    } else {
+      setFilteredMateriais(
+        materiais.filter((m) => m.loja === selectedStore)
+      );
+    }
+  }, [selectedStore, materiais]);
+
+  const handleStoreFilterChange = (e) => {
+    setSelectedStore(e.target.value);
+    setMaterialSelecionado("");
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -353,7 +379,7 @@ function OrdemDeServicoCreatePage({ token, onLogout }) {
             label="Data e Hora do Agendamento"
             value={dataAgendamento}
             onChange={(newValue) => setDataAgendamento(newValue)}
-            renderInput={(params) => <TextField {...params} fullWidth />}
+            slotProps={{ textField: { fullWidth: true } }}
             ampm={false}
             format="DD/MM/YYYY HH:mm"
           />
@@ -425,12 +451,36 @@ function OrdemDeServicoCreatePage({ token, onLogout }) {
             mb: 2,
             gridTemplateColumns: "1fr auto",
             [theme.breakpoints.up("sm")]: {
-              gridTemplateColumns: "3fr 1fr 1fr",
+              gridTemplateColumns: "2fr 2fr 1fr auto",
             },
             alignItems: "start",
           }}
-        >
-          <FormControl fullWidth>
+        > 
+        <FormControl 
+            fullWidth
+            sx={{ [theme.breakpoints.down("md")]: { gridColumn: "1 / -1" } }}
+          >
+            <InputLabel id="store-filter-label">Filtrar por Loja</InputLabel>
+            <Select
+              labelId="store-filter-label"
+              value={selectedStore}
+              label="Filtrar por Loja"
+              onChange={handleStoreFilterChange}
+            >
+              <MenuItem value="">
+                <em>Todas as Lojas</em>
+              </MenuItem>
+              {storeOptions.map((storeName) => (
+                <MenuItem key={storeName} value={storeName}>
+                  {storeName}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl 
+            fullWidth
+            sx={{ [theme.breakpoints.down("md")]: { gridColumn: "1 / -1" } }} 
+          >
             <InputLabel id="material-select-label">Material</InputLabel>
             <Select
               labelId="material-select-label"
@@ -441,7 +491,7 @@ function OrdemDeServicoCreatePage({ token, onLogout }) {
               <MenuItem value="">
                 <em>Selecione...</em>
               </MenuItem>
-              {materiais.map((material) => (
+              {filteredMateriais.map((material) => (
                 <MenuItem key={material.id} value={material.id}>
                   {material.nome} (R$ {material.preco_unidade} /{" "}
                   {material.unidade_medida})

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import {
   Box,
@@ -11,8 +11,41 @@ import {
   Stack,
 } from "@mui/material";
 
-function AddPagamentoForm({ ordemId, onSuccess, valorPendente }) {
-  const [formaPagamento, setFormaPagamento] = useState("PIX");
+const allPaymentMethods = [
+  { value: "PIX", label: "Pix" },
+  { value: "DIN", label: "Dinheiro" },
+  { value: "CC", label: "Cartão de Crédito" },
+  { value: "CD", label: "Cartão de Débito" },
+  { value: "BOL", label: "Boleto" },
+  { value: "TRA", label: "Transferência/TED" },
+];
+
+function AddPagamentoForm({ token, ordemId, onSuccess, valorPendente }) {
+  const [availableMethods, setAvailableMethods] = useState([]);
+  const [formaPagamento, setFormaPagamento] = useState("");
+
+useEffect(() => {
+    const stored = localStorage.getItem("paymentMethods");
+    const defaultMethods = allPaymentMethods.map(m => m.value);
+    let userMethods = defaultMethods;
+
+    if (stored) {
+      try {
+        userMethods = JSON.parse(stored);
+      } catch (e) { }
+    }
+    const enabledMethods = allPaymentMethods.filter(m => 
+      userMethods.includes(m.value)
+    );
+    
+    setAvailableMethods(enabledMethods);
+
+    if (enabledMethods.length > 0) {
+      setFormaPagamento(enabledMethods[0].value);
+    } else {
+      setFormaPagamento("");
+    }
+  }, []);
 
   const handleRegistrarPagamento = async (valorASerPago) => {
     const valorNumerico = Number(valorASerPago);
@@ -24,8 +57,8 @@ function AddPagamentoForm({ ordemId, onSuccess, valorPendente }) {
       return;
     }
 
-    const token = localStorage.getItem("accessToken");
     if (!token) {
+      alert("Erro de autenticação: Token não encontrado.");
       return;
     }
 
@@ -76,12 +109,19 @@ function AddPagamentoForm({ ordemId, onSuccess, valorPendente }) {
               label="Forma de Pagamento"
               onChange={(e) => setFormaPagamento(e.target.value)}
               required
+              disabled={availableMethods.length === 0}
             >
-              <MenuItem value="PIX">Pix</MenuItem>
-              <MenuItem value="DIN">Dinheiro</MenuItem>
-              <MenuItem value="CC">Cartão de Crédito</MenuItem>
-              <MenuItem value="CD">Cartão de Débito</MenuItem>
-              <MenuItem value="BOL">Boleto</MenuItem>
+              {availableMethods.length === 0 ? (
+                <MenuItem value="" disabled>
+                  Nenhuma forma de pgto. habilitada
+                </MenuItem>
+              ) : (
+                availableMethods.map((method) => (
+                  <MenuItem key={method.value} value={method.value}>
+                    {method.label}
+                  </MenuItem>
+                ))
+              )}
             </Select>
           </FormControl>
         </Grid>
@@ -94,7 +134,7 @@ function AddPagamentoForm({ ordemId, onSuccess, valorPendente }) {
             <Button
               variant="contained"
               color="info"
-              disabled={isDisabled}
+              disabled={isDisabled || availableMethods.length === 0}
               onClick={() => handleRegistrarPagamento(valorMetade)}
               size="small"
             >
@@ -104,7 +144,7 @@ function AddPagamentoForm({ ordemId, onSuccess, valorPendente }) {
             <Button
               variant="contained"
               color="success"
-              disabled={isDisabled}
+              disabled={isDisabled || availableMethods.length === 0}
               onClick={() => handleRegistrarPagamento(valorPendenteNumerico)}
               size="small"
             >

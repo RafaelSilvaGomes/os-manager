@@ -14,6 +14,11 @@ import {
   Alert,
   useTheme,
   IconButton,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DesignServicesIcon from "@mui/icons-material/DesignServices";
@@ -37,6 +42,9 @@ function ServicosPage({ token, onLogout }) {
     severity: "success",
   });
 
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [servicoToDelete, setServicoToDelete] = useState(null);
+  
   useEffect(() => {
     const fetchServicos = async () => {
       if (!token) {
@@ -125,10 +133,20 @@ function ServicosPage({ token, onLogout }) {
       setIsFormOpen(false);
       clearForm();
     } catch (error) {
-      console.error("Erro ao salvar serviço:", error);
+      console.error("Erro ao salvar serviço:", error.response?.data || error);
+
+      let errorMessage = "Erro ao salvar serviço.";
+      if (error.response && error.response.data) {
+        const errorData = error.response.data;
+        try {
+          const firstKey = Object.keys(errorData)[0];
+          errorMessage = `${firstKey}: ${errorData[firstKey][0]}`;
+        } catch (e) {
+        }
+      }
       setSnackbar({
         open: true,
-        message: "Erro ao salvar serviço.",
+        message: errorMessage,
         severity: "error",
       });
       if (error.response && error.response.status === 401) {
@@ -137,7 +155,25 @@ function ServicosPage({ token, onLogout }) {
     }
   };
 
-  const handleDeleteServico = async (servicoId) => {
+  const handleDeleteServico = (servicoId) => {
+    const servico = servicos.find((s) => s.id === servicoId);
+    if (servico) {
+      setServicoToDelete(servico);
+      setIsConfirmDialogOpen(true);
+    }
+  };
+
+  const handleCloseConfirmDialog = () => {
+    setIsConfirmDialogOpen(false);
+    setTimeout(() => setServicoToDelete(null), 150);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!servicoToDelete) return;
+
+    const servicoId = servicoToDelete.id;
+    handleCloseConfirmDialog(); 
+
     if (!token) {
       setSnackbar({
         open: true,
@@ -146,29 +182,35 @@ function ServicosPage({ token, onLogout }) {
       });
       return;
     }
-    if (window.confirm("Tem certeza que deseja deletar este serviço?")) {
-      try {
-        const config = { headers: { Authorization: `Bearer ${token}` } };
-        await axios.delete(
-          `http://127.0.0.1:8000/api/servicos/${servicoId}/`,
-          config
-        );
-        setServicos(servicos.filter((servico) => servico.id !== servicoId));
-        setSnackbar({
-          open: true,
-          message: "Serviço deletado com sucesso!",
-          severity: "success",
-        });
-      } catch (error) {
-        console.error("Erro ao deletar serviço:", error);
-        setSnackbar({
-          open: true,
-          message: "Erro ao deletar serviço.",
-          severity: "error",
-        });
-        if (error.response && error.response.status === 401) {
-          if (onLogout) onLogout();
-        }
+
+    try {
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      await axios.delete(
+        `http://127.0.0.1:8000/api/servicos/${servicoId}/`,
+        config
+      );
+      setServicos(servicos.filter((servico) => servico.id !== servicoId));
+      setSnackbar({
+        open: true,
+        message: "Serviço deletado com sucesso!",
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Erro ao deletar serviço:", error);
+      
+      let errorMessage = "Erro ao deletar serviço.";
+      if (error.response && error.response.data && error.response.data.detail) {
+        errorMessage = error.response.data.detail;
+      }
+      
+      setSnackbar({
+        open: true,
+        message: errorMessage,
+        severity: "error",
+      });
+
+      if (error.response && error.response.status === 401) {
+        if (onLogout) onLogout();
       }
     }
   };
@@ -418,6 +460,29 @@ function ServicosPage({ token, onLogout }) {
           {snackbar.message}
         </Alert>
       </Snackbar>
+      <Dialog
+          open={isConfirmDialogOpen}
+          onClose={handleCloseConfirmDialog}
+          aria-labelledby="alert-dialog-title"
+          aria-describedby="alert-dialog-description"
+        >
+          <DialogTitle id="alert-dialog-title">Confirmar Exclusão</DialogTitle>
+          <DialogContent>
+            <DialogContentText id="alert-dialog-description">
+              Tem certeza que deseja deletar o serviço{" "}
+              <strong>{servicoToDelete?.nome}</strong>? Esta ação não pode ser
+              desfeita.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseConfirmDialog} color="inherit">
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmDelete} color="error" autoFocus>
+              Deletar
+            </Button>
+          </DialogActions>
+        </Dialog>
     </Box>
   );
 }

@@ -1,5 +1,3 @@
-// src/pages/OrdensDeServicoPage.jsx (VERSÃO MODERNA - CORRIGIDA COM PROP TOKEN)
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
@@ -17,7 +15,11 @@ import {
   Alert,
   useTheme,
   Paper,
-  IconButton,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
@@ -34,6 +36,9 @@ function OrdensDeServicoPage({ token, onLogout }) {
     message: "",
     severity: "success",
   });
+
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [ordemToDelete, setOrdemToDelete] = useState(null);
 
   useEffect(() => {
     const fetchOrdens = async () => {
@@ -109,7 +114,25 @@ function OrdensDeServicoPage({ token, onLogout }) {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  const handleDeleteOrdem = async (ordemId) => {
+  const handleDeleteOrdem = (ordemId) => {
+    const ordem = ordens.find((o) => o.id === ordemId);
+    if (ordem) {
+      setOrdemToDelete(ordem);
+      setIsConfirmDialogOpen(true);
+    }
+  };
+
+  const handleCloseConfirmDialog = () => {
+    setIsConfirmDialogOpen(false);
+    setTimeout(() => setOrdemToDelete(null), 150);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!ordemToDelete) return;
+
+    const ordemId = ordemToDelete.id;
+    handleCloseConfirmDialog();
+
     if (!token) {
       setSnackbar({
         open: true,
@@ -118,33 +141,35 @@ function OrdensDeServicoPage({ token, onLogout }) {
       });
       return;
     }
-    if (
-      window.confirm(
-        "Tem certeza que deseja deletar esta Ordem de Serviço? Esta ação não pode ser desfeita."
-      )
-    ) {
-      try {
-        const config = { headers: { Authorization: `Bearer ${token}` } };
-        await axios.delete(
-          `http://127.0.0.1:8000/api/ordens/${ordemId}/`,
-          config
-        );
-        setOrdens(ordens.filter((ordem) => ordem.id !== ordemId));
-        setSnackbar({
-          open: true,
-          message: "Ordem de Serviço deletada com sucesso!",
-          severity: "success",
-        });
-      } catch (error) {
-        console.error("Erro ao deletar OS:", error);
-        setSnackbar({
-          open: true,
-          message: "Erro ao deletar a Ordem de Serviço.",
-          severity: "error",
-        });
-        if (error.response && error.response.status === 401) {
-          if (onLogout) onLogout();
-        }
+
+    try {
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      await axios.delete(
+        `http://127.0.0.1:8000/api/ordens/${ordemId}/`,
+        config
+      );
+      setOrdens(ordens.filter((ordem) => ordem.id !== ordemId));
+      setSnackbar({
+        open: true,
+        message: "Ordem de Serviço deletada com sucesso!",
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Erro ao deletar OS:", error);
+      
+      let errorMessage = "Erro ao deletar a Ordem de Serviço.";
+      if (error.response && error.response.data && error.response.data.detail) {
+        errorMessage = error.response.data.detail;
+      }
+      
+      setSnackbar({
+        open: true,
+        message: errorMessage,
+        severity: "error",
+      });
+      
+      if (error.response && error.response.status === 401) {
+        if (onLogout) onLogout();
       }
     }
   };
@@ -290,6 +315,31 @@ function OrdensDeServicoPage({ token, onLogout }) {
           {snackbar.message}
         </Alert>
       </Snackbar>
+      <Dialog
+          open={isConfirmDialogOpen}
+          onClose={handleCloseConfirmDialog}
+          aria-labelledby="alert-dialog-title"
+          aria-describedby="alert-dialog-description"
+        >
+          <DialogTitle id="alert-dialog-title">Confirmar Exclusão</DialogTitle>
+          <DialogContent>
+            <DialogContentText id="alert-dialog-description">
+              Tem certeza que deseja deletar a Ordem de Serviço{" "}
+              <strong>
+                OS #{ordemToDelete?.id} ({ordemToDelete?.cliente.nome})
+              </strong>
+              ? Esta ação não pode ser desfeita.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseConfirmDialog} color="inherit">
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmDelete} color="error" autoFocus>
+              Deletar
+            </Button>
+          </DialogActions>
+        </Dialog>
     </Box>
   );
 }

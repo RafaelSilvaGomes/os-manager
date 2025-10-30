@@ -29,6 +29,7 @@ class Material(models.Model):
     descricao = models.TextField(blank=True)
     unidade_medida = models.CharField(max_length=20, blank=True, default='un') 
     preco_unidade = models.DecimalField(max_digits=10, decimal_places=2)
+    loja = models.CharField(max_length=100, blank=True, default='', help_text="Loja onde o material foi comprado")
 
     def __str__(self):
         return f"{self.nome} (R$ {self.preco_unidade} / {self.unidade_medida})"
