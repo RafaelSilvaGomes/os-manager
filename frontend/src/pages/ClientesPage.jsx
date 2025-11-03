@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { Link } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -7,12 +8,6 @@ import {
   Button,
   Collapse,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   IconButton,
   CircularProgress,
   Snackbar,
@@ -23,6 +18,9 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  Card,
+  CardContent,
+  CardActions,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -285,19 +283,25 @@ function ClientesPage({ token, onLogout }) {
 
   return (
     <Box>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 2,
-        }}
-      >
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", sm: "row" }, 
+          justifyContent: "space-between",
+          alignItems: { xs: "stretch", sm: "center" },
+          mb: 2,
+          gap: 2,
+        }}
+      >
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <PeopleIcon fontSize="large" />
-          <Typography variant="h5" component="h2">
-            Meus Clientes
-          </Typography>
+          <PeopleIcon fontSize="large" />
+          <Typography 
+            variant="h5" 
+            component="h2"
+            sx={{ textAlign: { xs: 'center', sm: 'left' } }}
+          >
+            Meus Clientes
+          </Typography>
         </Box>
         <Button
           variant="contained"
@@ -385,76 +389,87 @@ function ClientesPage({ token, onLogout }) {
         </Paper>
       </Collapse>
 
-      <TableContainer component={Paper}>
-        <Table
-          size="small"
-          sx={{ minWidth: 650 }}
-          aria-label="tabela de clientes"
-        >
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ fontWeight: "bold" }}>Nome</TableCell>
-              <TableCell sx={{ fontWeight: "bold" }}>Telefone</TableCell>
-              <TableCell sx={{ fontWeight: "bold" }}>Endereço</TableCell>
-              <TableCell sx={{ fontWeight: "bold" }}>
-                Ponto de Referência
-              </TableCell>
-              <TableCell align="right" sx={{ fontWeight: "bold" }}>
-                Ações
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {clientes.length > 0 ? (
-              clientes.map((cliente) => (
-                <TableRow
-                  key={cliente.id}
-                  sx={{ "&:hover": { backgroundColor: "action.hover" } }}
-                >
-                  <TableCell>{cliente.nome}</TableCell>
-                  <TableCell>{cliente.telefone}</TableCell>
-                  <TableCell>{cliente.endereco}</TableCell>
-                  <TableCell>{cliente.ponto_referencia}</TableCell>
-                  <TableCell align="right">
-                    <IconButton
-                      onClick={() => handleEditClick(cliente)}
-                      size="small"
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton
-                      onClick={() => handleDeleteCliente(cliente.id)}
-                      color="error"
-                      size="small"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={5}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 1,
-                      p: 2,
-                    }}
-                  >
-                    <InfoIcon color="action" />
-                    <Typography variant="body2">
-                      Você ainda não cadastrou nenhum cliente.
-                    </Typography>
-                  </Box>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <Box
+        sx={{
+          display: "grid",
+          gap: 2,
+          gridTemplateColumns: "repeat(1, 1fr)", 
+          [theme.breakpoints.up("sm")]: {
+            gridTemplateColumns: "repeat(3, 1fr)", 
+          },
+          [theme.breakpoints.up("md")]: {
+            gridTemplateColumns: "repeat(4, 1fr)",
+          },
+          [theme.breakpoints.up("lg")]: {
+            gridTemplateColumns: "repeat(5, 1fr)",
+          },
+        }}
+      >
+        {clientes.length > 0 ? (
+          clientes.map((cliente) => (
+            <Card 
+              key={cliente.id} 
+              elevation={3}
+              sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+            >
+              <CardContent sx={{ flexGrow: 1 }}>
+                <Typography variant="h6" component="div" gutterBottom noWrap>
+                  {cliente.nome}
+                </Typography>
+                
+                <Typography variant="body2" color="text.secondary" noWrap gutterBottom>
+                  <strong>Telefone:</strong> {cliente.telefone || 'N/A'}
+                </Typography>
+
+                {cliente.email && (
+                  <Typography variant="body2" color="text.secondary" noWrap gutterBottom>
+                    <strong>Email:</strong> {cliente.email}
+                  </Typography>
+                )}
+                
+                <Typography variant="body2" color="text.secondary" noWrap>
+                  <strong>Endereço:</strong> {cliente.endereco || 'N/A'}
+                </Typography>
+
+                {cliente.ponto_referencia && (
+                  <Typography variant="body2" color="text.secondary" noWrap>
+                    <strong>Ref:</strong> {cliente.ponto_referencia}
+                  </Typography>
+                )}
+                
+                {cliente.observacoes && (
+                  <Typography variant="body2" color="text.secondary" noWrap sx={{mt: 1, fontStyle: 'italic'}}>
+                    <strong>Obs:</strong> {cliente.observacoes}
+                  </Typography>
+                )}
+              </CardContent>
+              
+              <CardActions sx={{ justifyContent: 'flex-end' }}>
+              <IconButton onClick={() => handleEditClick(cliente)} size="small" aria-label="Editar" title="Editar">
+                  <EditIcon />
+                </IconButton>
+                <IconButton onClick={() => handleDeleteCliente(cliente.id)} color="error" size="small" aria-label="Deletar" title="Deletar">
+                  <DeleteIcon />
+                </IconButton>
+              </CardActions>
+            </Card>
+            ))
+        ) : (
+          <Paper
+            sx={{
+              p: 3,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 1,
+              gridColumn: "1 / -1", 
+            }}
+          >
+            <InfoIcon color="action" />
+            <Typography>Você ainda não cadastrou nenhum cliente.</Typography>
+          </Paper>
+        )}
+      </Box>
 
       <Snackbar
         open={snackbar.open}

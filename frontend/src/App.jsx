@@ -29,6 +29,7 @@ import {
   FormGroup,
   Checkbox,
 } from "@mui/material";
+import MenuIcon from '@mui/icons-material/Menu';
 import PaymentIcon from '@mui/icons-material/Payment';
 import SettingsIcon from "@mui/icons-material/Settings";
 import ElectricBoltIcon from "@mui/icons-material/ElectricBolt";
@@ -128,10 +129,12 @@ function App() {
     () => localStorage.getItem("profession") || firstProfessionKey
   );
 
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [openProfessionDialog, setOpenProfessionDialog] = useState(false);
-  const openMenu = Boolean(anchorEl);
-  const [openPaymentDialog, setOpenPaymentDialog] = useState(false);
+  const [settingsAnchorEl, setSettingsAnchorEl] = useState(null); 
+  const [navAnchorEl, setNavAnchorEl] = useState(null);
+  const [openProfessionDialog, setOpenProfessionDialog] = useState(false);
+  const [openPaymentDialog, setOpenPaymentDialog] = useState(false);
+  const openSettingsMenu = Boolean(settingsAnchorEl);
+  const openNavMenu = Boolean(navAnchorEl);
 
   const [paymentMethods, setPaymentMethods] = useState(() => {
     const defaultMethods = allPaymentMethods.map(m => m.value); 
@@ -179,65 +182,70 @@ function App() {
     document.body.className = themeMode;
   }, [themeMode]);
 
-  const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
-  const handleMenuClose = () => setAnchorEl(null);
+  const handleSettingsMenuOpen = (event) => setSettingsAnchorEl(event.currentTarget);
+  const handleSettingsMenuClose = () => setSettingsAnchorEl(null);
+  const handleNavMenuOpen = (event) => setNavAnchorEl(event.currentTarget);
+  const handleNavMenuClose = () => setNavAnchorEl(null);
 
   const handleOpenPaymentDialog = () => {
     setOpenPaymentDialog(true);
-    handleMenuClose();
+    handleSettingsMenuClose();
   };
 
   const handleClosePaymentDialog = () => {
     try {
-      localStorage.setItem("paymentMethods", JSON.stringify(paymentMethods));
-    } catch (e) {
-      console.error("Erro ao salvar formas de pagamento:", e);
-    }
-    setOpenPaymentDialog(false);
-  };
+      localStorage.setItem("paymentMethods", JSON.stringify(paymentMethods));
+    } catch (e) {
+      console.error("Erro ao salvar formas de pagamento:", e);
+    }
+    setOpenPaymentDialog(false);
+  };
 
   const handlePaymentMethodChange = (event) => {
     const { value, checked } = event.target;
-    setPaymentMethods((prev) =>
-      checked ? [...prev, value] : prev.filter((m) => m !== value)
-    );
-  };
+    setPaymentMethods((prev) =>
+      checked ? [...prev, value] : prev.filter((m) => m !== value)
+    );
+  };
 
   const handleOpenProfessionDialog = () => {
     setOpenProfessionDialog(true);
-    handleMenuClose();
+    handleSettingsMenuClose();
+  };
+
+  const handleCloseProfessionDialog = () => {
+    setOpenProfessionDialog(false);
   };
-  const handleCloseProfessionDialog = () => setOpenProfessionDialog(false);
 
   const toggleThemeMode = () => {
     const newMode = themeMode === "light" ? "dark" : "light";
-    setThemeMode(newMode);
-    localStorage.setItem("themeMode", newMode);
-  };
+    setThemeMode(newMode);
+    localStorage.setItem("themeMode", newMode);
+  };
 
   const handleProfessionChange = (newProfession) => {
     setProfession(newProfession);
-    localStorage.setItem("profession", newProfession);
-    handleCloseProfessionDialog();
-  };
+    localStorage.setItem("profession", newProfession);
+    handleCloseProfessionDialog();
+  };
 
   const handleLogin = (accessToken) => {
     try {
-      sessionStorage.setItem("accessToken", accessToken);
-      setToken(accessToken);
-    } catch (e) {
-      console.error("ERRO GRAVE AO SALVAR NO SESSIONSTORAGE:", e);
-      alert(
-        "Ocorreu um erro ao salvar sua sessão. Tente limpar o cache do navegador."
-      );
-    }
-  };
+      sessionStorage.setItem("accessToken", accessToken); 
+      setToken(accessToken);
+    } catch (e) {
+      console.error("ERRO GRAVE AO SALVAR NO SESSIONSTORAGE:", e); 
+      alert(
+        "Ocorreu um erro ao salvar sua sessão. Tente limpar o cache do navegador."
+      );
+    }
+  };
 
   const handleLogout = () => {
     setToken(null);
-    sessionStorage.removeItem("accessToken");
-    localStorage.removeItem("accessToken");
-  };
+    sessionStorage.removeItem("accessToken");
+    localStorage.removeItem("accessToken");
+  };
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -254,12 +262,25 @@ function App() {
             {token && (
               <AppBar position="static">
                 <Toolbar>
+                <IconButton
+                  size="large"
+                  edge="start"
+                  color="inherit"
+                  aria-label="menu"
+                  onClick={handleNavMenuOpen}
+                  sx={{ 
+                    mr: 2, 
+                    display: { xs: 'flex', md: 'none' } 
+                  }}
+                >
+                  <MenuIcon />
+                </IconButton>
                   <Typography
                     variant="h6"
                     component="div"
                     sx={{
                       mr: 2,
-                      display: "flex",
+                      display: { xs: 'none', md: 'flex' },
                       alignItems: "center",
                       gap: 1,
                     }}
@@ -273,10 +294,25 @@ function App() {
                     OrdemPro
                   </Typography>
 
+                  <Typography
+                  variant="h6"
+                  component="div"
+                  sx={{ 
+                    flexGrow: 1, 
+                    display: { xs: 'flex', md: 'none' },
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 1
+                  }}
+                >
+                  { ( professionPalettes[profession] || professionPalettes[firstProfessionKey] ).icon }
+                  OrdemPro
+                </Typography>
+
                   <Box
                     sx={{
                       flexGrow: 1,
-                      display: "flex",
+                      display: { xs: 'none', md: 'flex' },
                       gap: 1,
                       justifyContent: "center",
                     }}
@@ -399,7 +435,7 @@ function App() {
                     aria-label="configurações"
                     aria-controls="settings-menu"
                     aria-haspopup="true"
-                    onClick={handleMenuOpen}
+                    onClick={handleSettingsMenuOpen}
                     sx={{
                       padding: "6px 12px",
                       borderRadius: 1,
@@ -418,30 +454,57 @@ function App() {
             )}
 
             <Menu
-              id="settings-menu"
-              anchorEl={anchorEl}
-              open={openMenu}
-              onClose={handleMenuClose}
-              MenuListProps={{ "aria-labelledby": "settings-button" }}
+              id="nav-menu"
+              anchorEl={navAnchorEl}
+              anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+              keepMounted
+              transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+              open={openNavMenu}
+              onClose={handleNavMenuClose}
+              sx={{
+                display: { xs: 'block', md: 'none' }, 
+              }}
             >
-              <MenuItem onClick={handleOpenProfessionDialog}>
-                Mudar Profissão
+              <MenuItem component={Link} to="/" onClick={handleNavMenuClose}>
+                <Typography>Dashboard</Typography>
               </MenuItem>
-              <MenuItem onClick={handleOpenPaymentDialog}>
-                Formas de Pagamento
+              <MenuItem component={Link} to="/clientes" onClick={handleNavMenuClose}>
+                <Typography>Clientes</Typography>
               </MenuItem>
-              <MenuItem>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={themeMode === "dark"}
-                      onChange={toggleThemeMode}
-                    />
-                  }
-                  label={themeMode === "dark" ? "Modo Escuro" : "Modo Claro"}
-                />
+              <MenuItem component={Link} to="/servicos" onClick={handleNavMenuClose}>
+                <Typography>Serviços</Typography>
+              </MenuItem>
+              <MenuItem component={Link} to="/materiais" onClick={handleNavMenuClose}>
+                <Typography>Materiais</Typography>
+              </MenuItem>
+              <MenuItem component={Link} to="/ordens" onClick={handleNavMenuClose}>
+                <Typography>Ordens</Typography>
+              </MenuItem>
+              <MenuItem component={Link} to="/agenda" onClick={handleNavMenuClose}>
+                <Typography>Agenda</Typography>
               </MenuItem>
             </Menu>
+
+            <Menu
+              id="settings-menu"
+              anchorEl={settingsAnchorEl}
+              open={openSettingsMenu}  
+              onClose={handleSettingsMenuClose} 
+              MenuListProps={{ "aria-labelledby": "settings-button" }}
+            >
+              <MenuItem onClick={handleOpenProfessionDialog}>
+                Mudar Profissão
+              </MenuItem>
+              <MenuItem onClick={handleOpenPaymentDialog}>
+                Formas de Pagamento
+              </MenuItem>
+              <MenuItem>
+                <FormControlLabel
+                  control={ <Switch checked={themeMode === "dark"} onChange={toggleThemeMode} /> }
+                  label={themeMode === "dark" ? "Modo Escuro" : "Modo Claro"}
+                />
+              </MenuItem>
+            </Menu>
             
             <Dialog open={openPaymentDialog} onClose={handleClosePaymentDialog}>
               <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
