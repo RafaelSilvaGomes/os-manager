@@ -1,6 +1,6 @@
 
 from django.urls import path, include
-from .views import CreateUserView, ClienteViewSet, ServicoViewSet, AgendaOrdemListView, OrdemDeServicoViewSet, MaterialViewSet, MaterialUtilizadoViewSet, PagamentoViewSet, RegisterView, DashboardStatsView, MaterialStoreNamesView
+from .views import CreateUserView, ClienteViewSet, ServicoViewSet, AgendaOrdemListView, OrdemDeServicoViewSet, MaterialViewSet, MaterialUtilizadoViewSet, PagamentoViewSet, RegisterView, DashboardStatsView, MaterialStoreNamesView, ClienteStatsView
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -21,4 +21,5 @@ urlpatterns = [
     path('register/', RegisterView.as_view(), name='auth_register'),
     path('agenda/', AgendaOrdemListView.as_view(), name='agenda-list'),
     path('material-stores/', MaterialStoreNamesView.as_view(), name='material-stores'),
+    path('clientes/<int:pk>/stats/', ClienteStatsView.as_view(), name='cliente-stats'),
 ]

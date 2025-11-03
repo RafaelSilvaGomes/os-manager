@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from .models import Cliente, Servico, OrdemDeServico, Material, MaterialUtilizado, Pagamento
 from rest_framework.views import APIView
 from django.utils import timezone
+from django.shortcuts import get_object_or_404
 from django.db.models import Sum, Value, F, Count, Q
 from django.db.models.functions import Coalesce
 from decimal import Decimal
@@ -45,6 +46,44 @@ class ClienteViewSet(viewsets.ModelViewSet):
                 {"detail": f"Erro inesperado: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+class ClienteStatsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk=None):
+        cliente = get_object_or_404(Cliente, pk=pk, profissional=request.user)
+
+        ordens_cliente = OrdemDeServico.objects.filter(
+            cliente=cliente,
+            profissional=request.user
+        ).exclude(status='CA')
+
+        total_os_concluidas = ordens_cliente.filter(
+            status__in=['FN', 'PG']
+        ).count()
+
+        total_faturado = Pagamento.objects.filter(
+            ordem_de_servico__in=ordens_cliente
+        ).aggregate(
+            total=Coalesce(Sum('valor_pago'), Value(Decimal('0.00')))
+        )['total']
+
+        total_em_contratos = ordens_cliente.aggregate(
+            total=Coalesce(Sum('valor_total'), Value(Decimal('0.00')))
+        )['total']
+
+        total_pendente = (total_em_contratos - total_faturado).quantize(Decimal('0.01'))
+
+        total_os_geral = ordens_cliente.count()
+
+        return Response({
+            'cliente_id': cliente.id,
+            'cliente_nome': cliente.nome,
+            'total_os_concluidas': total_os_concluidas,
+            'total_os_geral': total_os_geral,
+            'total_faturado': total_faturado,
+            'total_pendente': total_pendente,
+        })
         
 class ServicoViewSet(viewsets.ModelViewSet):
     serializer_class = ServicoSerializer
