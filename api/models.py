@@ -37,7 +37,7 @@ class Material(models.Model):
 
 class MaterialUtilizado(models.Model):
     ordem_de_servico = models.ForeignKey('OrdemDeServico', on_delete=models.CASCADE, related_name='materiais_utilizados')
-    material = models.ForeignKey(Material, on_delete=models.CASCADE)
+    material = models.ForeignKey(Material, on_delete=models.PROTECT)
     quantidade = models.PositiveIntegerField()
 
     def __str__(self):
