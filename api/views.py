@@ -14,6 +14,9 @@ from django.db.models.functions import Coalesce
 from decimal import Decimal
 from django.utils import timezone
 from django.db.models import ProtectedError
+from django.core.mail import EmailMessage
+from django.conf import settings
+from textwrap import dedent
 
 class CreateUserView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -147,6 +150,108 @@ class OrdemDeServicoViewSet(viewsets.ModelViewSet):
         nova_os = serializer.save(profissional=self.request.user)
         nova_os.refresh_from_db()
         nova_os.calcular_e_salvar_total()
+
+        try:
+            cliente = nova_os.cliente
+            
+            if cliente.email:
+                subject = f"Ordem de Serviço Criada: OS #{nova_os.id}"
+
+                data_agendada_str = "Ainda não agendada."
+                if nova_os.data_agendamento:
+                    data_local = timezone.localtime(nova_os.data_agendamento)
+                    data_agendada_str = data_local.strftime('%d/%m/%Y às %H:%M')
+
+                servicos_da_os = nova_os.servicos.all()
+                lista_servicos_html = "<li>Nenhum serviço especificado.</li>"
+                if servicos_da_os.exists():
+                    lista_servicos_html = "".join(
+                        [f"<li style='margin-bottom: 5px;'>{servico.nome} (R$ {servico.preco})</li>" for servico in servicos_da_os]
+                    )
+
+                materiais_da_os = nova_os.materiais_utilizados.all()
+                lista_materiais_html = "<li>Nenhum material adicionado.</li>"
+                
+                if materiais_da_os.exists():
+                    lista_materiais_html = "".join(
+                        [f"<li style='margin-bottom: 5px;'>{item.quantidade}x {item.material.nome} (R$ {item.material.preco_unidade} / {item.material.unidade_medida})</li>" for item in materiais_da_os]
+                    )
+
+                html_message_body = f"""
+                <html>
+                <body style="font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4;">
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f4f4f4;">
+                        <tr>
+                            <td align="center" style="padding: 20px 0;">
+                                <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                                    
+                                    <tr>
+                                        <td align="center" style="padding: 20px 0; background-color: #0d47a1; color: #ffffff;">
+                                            <h1 style="margin: 0; font-size: 24px;">OrdemPro</h1>
+                                        </td>
+                                    </tr>
+                                    
+                                    <tr>
+                                        <td style="padding: 30px 25px; font-size: 16px; line-height: 1.6; color: #333;">
+                                            <h2 style="font-size: 20px; color: #0d47a1; margin-top: 0;">Nova Ordem de Serviço Criada</h2>
+                                            <p>Olá, {cliente.nome}!</p>
+                                            <p>Uma nova Ordem de Serviço foi aberta em seu nome. Confira os detalhes abaixo:</p>
+                                            
+                                            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 20px; border-top: 1px solid #eee;">
+                                                <tr>
+                                                    <td style="padding: 10px 0; font-weight: bold; color: #555; width: 150px;">ID do Serviço:</td>
+                                                    <td style="padding: 10px 0;">OS #{nova_os.id}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="padding: 10px 0; font-weight: bold; color: #555;">Agendamento:</td>
+                                                    <td style="padding: 10px 0;">{data_agendada_str}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="padding: 10px 0; font-weight: bold; color: #555;">Valor Total:</td>
+                                                    <td style="padding: 10px 0; font-size: 18px; font-weight: bold; color: #0d47a1;">R$ {nova_os.valor_total}</td>
+                                                </tr>
+                                            </table>
+
+                                            <h3 style="font-size: 18px; color: #0d47a1; margin-top: 25px; border-top: 1px solid #eee; padding-top: 20px;">Serviços a Realizar:</h3>
+                                            <ul style="margin-top: 10px; padding-left: 25px; color: #333;">
+                                                {lista_servicos_html}
+                                            </ul>
+                                            
+                                            <h3 style="font-size: 18px; color: #0d47a1; margin-top: 25px; border-top: 1px solid #eee; padding-top: 20px;">Materiais a Utilizar:</h3>
+                                            <ul style="margin-top: 10px; padding-left: 25px; color: #333;">
+                                                {lista_materiais_html}
+                                            </ul>
+                                            <p style="margin-top: 25px;">Obrigado!</p>
+                                            <p style="margin: 0;">{self.request.user.first_name or 'Equipe OrdemPro'}</p>
+                                        </td>
+                                    </tr>
+                                    
+                                    <tr>
+                                        <td align="center" style="padding: 20px; font-size: 12px; color: #888; background-color: #f9f9f9; border-top: 1px solid #eee;">
+                                            <p style="margin: 0;">Este é um e-mail automático. Por favor, não responda.</p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </body>
+                </html>
+                """
+                
+                message = dedent(html_message_body)
+
+                email = EmailMessage(
+                    subject,
+                    message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [cliente.email]
+                )
+                email.content_subtype = "html"
+                email.send(fail_silently=False)
+        
+        except Exception as e:
+            print(f"!!! ERRO AO ENVIAR E-MAIL de nova OS: {e}")
 
     @action(detail=True, methods=['post'], url_path='finalizar')
     def finalizar(self, request, pk=None):

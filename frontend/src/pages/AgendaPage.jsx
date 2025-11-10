@@ -1,61 +1,50 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
-
-import FullCalendar from "@fullcalendar/react";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@fullcalendar/timegrid";
-import listPlugin from "@fullcalendar/list";
-import ptBrLocale from "@fullcalendar/core/locales/pt-br";
-
-import {
-  Box,
-  CircularProgress,
-  Typography,
-  Paper,
-  Alert,
-} from "@mui/material";
-import EventIcon from '@mui/icons-material/Event';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import FullCalendar from '@fullcalendar/react';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import interactionPlugin from '@fullcalendar/interaction';
+import listPlugin from '@fullcalendar/list'; 
+import { Box, CircularProgress, Paper, Typography } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 
 function AgendaPage({ token, onLogout }) {
+  const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const navigate = useNavigate();
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   useEffect(() => {
     const fetchAgenda = async () => {
       if (!token) {
         setLoading(false);
-        setError("Usuário não autenticado.");
         return;
       }
       setLoading(true);
       try {
         const config = { headers: { Authorization: `Bearer ${token}` } };
         const response = await axios.get(
-          "http://127.0.0.1:8000/api/agenda/",
+          'http://127.0.0.1:8000/api/agenda/',
           config
         );
         setEvents(response.data);
-        setError(null);
-      } catch (err) {
-        console.error("Erro ao buscar dados da agenda:", err);
-        if (err.response && err.response.status === 401) {
+      } catch (error) {
+        console.error('Erro ao buscar dados da agenda:', error);
+        if (error.response && error.response.status === 401) {
           if (onLogout) onLogout();
-        } else {
-          setError("Falha ao carregar os agendamentos.");
         }
       } finally {
         setLoading(false);
       }
     };
-
     fetchAgenda();
   }, [token, onLogout]);
 
   const handleEventClick = (clickInfo) => {
-    clickInfo.jsEvent.preventDefault();
     if (clickInfo.event.url) {
       navigate(clickInfo.event.url);
     }
@@ -63,72 +52,55 @@ function AgendaPage({ token, onLogout }) {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
         <CircularProgress />
       </Box>
     );
   }
 
+  const calendarView = isMobile ? 'listWeek' : 'dayGridMonth';
+
+  const calendarToolbar = isMobile 
+    ? {
+        left: 'prev,next',
+        center: 'title',
+        right: 'today'
+      }
+    : {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,timeGridWeek,listWeek' 
+      };
+
   return (
-    <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-        <EventIcon fontSize="large" />
-        <Typography variant="h4" component="h1">
-          Agenda de Serviços
-        </Typography>
-      </Box>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-      <Paper 
-        elevation={3} 
-        sx={{ 
-          p: { xs: 1, sm: 2 },
-          '& .fc-toolbar-title': {
-            fontSize: { xs: '1.1rem', sm: '1.4rem' },
-            textTransform: 'uppercase'
-          },
-
-          '& .fc-daygrid-event': {
-            fontSize: '0.9rem', 
-          },
-
-          '& .fc-col-header-cell-cushion': {
-            fontSize: { xs: '0.9rem', sm: '1rem' },
-            textTransform: 'uppercase'
-          }
+    <Paper elevation={3} sx={{ p: { xs: 1, sm: 2, md: 3 } }}> 
+      <FullCalendar
+        plugins={[
+          dayGridPlugin, 
+          timeGridPlugin, 
+          interactionPlugin, 
+          listPlugin 
+        ]}
+        initialView={calendarView} 
+        headerToolbar={calendarToolbar} 
+        events={events}
+        eventClick={handleEventClick}
+        
+        locale="pt-br" 
+        buttonText={{
+          today: 'Hoje',
+          month: 'Mês',
+          week: 'Semana',
+          list: 'Lista'
         }}
-      >
-        <FullCalendar
-          plugins={[dayGridPlugin, timeGridPlugin, listPlugin]}
-          initialView="dayGridMonth"
-          headerToolbar={{
-            left: "prev,next today",
-            center: "title",
-            right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
-          }}
-          locale={ptBrLocale}
-          events={events}
-          eventClick={handleEventClick}
-          height="auto"
-          navLinks={true}
-          businessHours={true}
-          editable={false}
-          
-          /* PASSO 1: 
-            Adicione esta prop para formatar a hora (ex: 16:00)
-          */
-          eventTimeFormat={{
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-          }}
-        />
-      </Paper>
-    </Box>
+        height="auto" 
+        eventTimeFormat={{ 
+          hour: '2-digit',
+          minute: '2-digit',
+          meridiem: false
+        }}
+      />
+    </Paper>
   );
 }
 
