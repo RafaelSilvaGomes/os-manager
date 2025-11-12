@@ -230,9 +230,18 @@ class OrdemDeServicoSerializer(serializers.ModelSerializer):
     
     def validate(self, attrs):
         profissional = self.context['request'].user
+        instance = self.instance 
+
+
         new_start = attrs.get('data_agendamento')
+        if new_start is None and instance:
+            new_start = instance.data_agendamento
         duracao_horas = attrs.get('duracao_estimada_horas')
-        instance_pk = self.instance.pk if self.instance else None 
+
+        if duracao_horas is None and instance:
+            duracao_horas = instance.duracao_estimada_horas
+
+        instance_pk = instance.pk if instance else None 
 
         new_end = None
         if new_start and duracao_horas:
@@ -283,7 +292,6 @@ class OrdemDeServicoSerializer(serializers.ModelSerializer):
 
         if found_conflict:
             local_start_time = timezone.localtime(found_conflict.data_agendamento)
-
             raise serializers.ValidationError(
                 f"Conflito de agendamento: Horário sobreposto com a OS #{found_conflict.id} "
                 f"({found_conflict.cliente.nome if found_conflict.cliente else 'Cliente desconhecido'}) "

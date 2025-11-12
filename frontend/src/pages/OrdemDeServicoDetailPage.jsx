@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
-
+import dayjs from 'dayjs';
 import {
   Box,
   Typography,
@@ -20,7 +20,14 @@ import {
   Button,
   useTheme,
   Paper,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  TextField,
 } from "@mui/material";
+import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
+import EditCalendarIcon from '@mui/icons-material/EditCalendar';
 import DeleteIcon from "@mui/icons-material/Delete";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
@@ -48,6 +55,10 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
     severity: "success",
   });
   const [isFinalizing, setIsFinalizing] = useState(false);
+
+  const [openRescheduleDialog, setOpenRescheduleDialog] = useState(false);
+  const [newAgendamento, setNewAgendamento] = useState(null);
+  const [isRescheduling, setIsRescheduling] = useState(false);
 
   const fetchOrdemDetalhes = useCallback(async () => {
     if (!token) {
@@ -248,6 +259,61 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
     }
   };
 
+  const handleOpenReschedule = () => {
+    setNewAgendamento(ordem.data_agendamento ? dayjs(ordem.data_agendamento) : null);
+    setOpenRescheduleDialog(true);
+  };
+
+  const handleCloseReschedule = () => {
+    setOpenRescheduleDialog(false);
+    setNewAgendamento(null);
+  };
+
+  const handleSaveReschedule = async () => {
+    if (!token) {
+      setSnackbar({ open: true, message: "Erro de autenticação.", severity: "error" });
+      return;
+    }
+    setIsRescheduling(true);
+    
+    try {
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      
+      const payload = {
+        data_agendamento: newAgendamento ? newAgendamento.toISOString() : null
+      };
+      
+      await axios.patch(
+        `http://127.0.0.1:8000/api/ordens/${id}/`,
+        payload,
+        config
+      );
+      
+      setSnackbar({ open: true, message: "OS reagendada com sucesso!", severity: "success" });
+      handleCloseReschedule();
+      fetchOrdemDetalhes();
+      
+    } catch (error) {
+      console.error("Erro ao reagendar OS:", error.response?.data || error);
+      
+      const errorData = error.response?.data;
+      let errorMessage = "Erro ao reagendar OS.";
+      if (errorData) {
+        if (errorData.non_field_errors) {
+          errorMessage = errorData.non_field_errors[0];
+        } else if (errorData.data_agendamento) {
+          errorMessage = `Data: ${errorData.data_agendamento[0]}`;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        }
+      }
+      
+      setSnackbar({ open: true, message: errorMessage, severity: "error" });
+    } finally {
+      setIsRescheduling(false);
+    }
+  };
+
   if (loading) {
     return (
       <Box
@@ -319,6 +385,17 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
             color={getStatusColor(ordem.status)}
             sx={{ fontWeight: "bold" }}
           />
+
+          {(ordem.status === 'AB' || ordem.status === 'EA' || ordem.status === 'FN') && (
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<EditCalendarIcon />}
+              onClick={handleOpenReschedule}
+            >
+              Reagendar
+            </Button>
+          )}
 
           {(ordem.status === 'AB' || ordem.status === 'EA') && (
             <Button
@@ -551,6 +628,38 @@ function OrdemDeServicoDetailPage({ token, onLogout }) {
           />
         </Paper>
       </Box>
+
+      <Dialog open={openRescheduleDialog} onClose={handleCloseReschedule} maxWidth="xs" fullWidth>
+        <DialogTitle>Reagendar Ordem de Serviço</DialogTitle>
+        <DialogContent sx={{ pt: '10px !important' }}>
+          <DateTimePicker
+            label="Nova Data e Hora"
+            value={newAgendamento}
+            onChange={(newValue) => setNewAgendamento(newValue)}
+            slotProps={{ 
+              textField: { 
+                fullWidth: true, 
+                margin: "dense"
+              } 
+            }}
+            ampm={false}
+            format="DD/MM/YYYY HH:mm"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseReschedule} disabled={isRescheduling}>
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleSaveReschedule} 
+            variant="contained" 
+            disabled={isRescheduling}
+            startIcon={isRescheduling ? <CircularProgress size={20} color="inherit" /> : null}
+          >
+            {isRescheduling ? "Salvando..." : "Salvar"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar
         open={snackbar.open}
